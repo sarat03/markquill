@@ -122,6 +122,12 @@ body.empty #empty{display:flex}body.empty #doc{display:none}
 .vditor-toolbar__divider{margin:7px 6px!important}
 .vditor-toolbar svg.i{fill:none}
 /* writing-mode dropdown in the formatting row: current mode's name + chevron */
+.vditor-toolbar__item .vditor-tooltipped[data-type=insert]{width:auto;gap:2px;padding:0 6px}
+.vditor-toolbar [data-type=insert] svg:last-child{width:12px;height:12px;color:var(--mute)}
+.vditor-toolbar [data-type=insert]::before,.vditor-toolbar [data-type=insert]::after{display:none}
+.menu{user-select:none;-webkit-user-select:none}
+#editor{container-type:inline-size}
+@container (max-width:780px){.vditor-toolbar [data-type=wm] span{display:none}} /* narrow editor: the mode's icon + chevron */
 .vditor-toolbar__item .vditor-tooltipped[data-type=wm]{width:auto;gap:6px;padding:0 8px;color:var(--fg)}
 .vditor-toolbar [data-type=wm] span{font-size:12px;white-space:nowrap}
 .vditor-toolbar [data-type=wm]::before,.vditor-toolbar [data-type=wm]::after{display:none} /* its label says it; no tooltip over it */
@@ -484,14 +490,22 @@ function toolbar(){
   return [
     own('headings', ICON.heading), '|',
     own('bold', ICON.bold), own('italic', ICON.italic), own('strike', ICON.strike), wrap('mark', 'Highlight', ICON.marker, '==', '==', 'highlight'),
-    own('inline-code', ICON.code), wrap('sup', 'Superscript', ICON.sup, '^', '^', '2'), wrap('sub', 'Subscript', ICON.sub, '~', '~', '2'),
-    wrap('imath', 'Inline math', ICON.sigma, '$', '$', 'x^2'), own('link', ICON.link), '|',
+    own('inline-code', ICON.code), own('link', ICON.link), '|',
     own('list', ICON.ul), own('ordered-list', ICON.ol), own('check', ICON.checks), '|',
-    own('quote', ICON.quote), put('callout', 'Callout', ICON.info, 'Callout'), own('code', ICON.codeblock), put('mathblock', 'Math block', ICON.mathbox, 'Math block'),
-    own('table', ICON.table), own('line', ICON.divider), '|',
-    {...own('upload', ICON.clip), tip: 'Attach image or file'}, put('footnote', 'Footnote', ICON.asterisk, 'Footnote'),
-    put('diagram', 'Diagram', ICON.diagram, 'Flowchart'), put('toc', 'Table of contents', ICON.toc, 'Table of contents'), '|',
+    own('quote', ICON.quote), own('code', ICON.codeblock), own('table', ICON.table),
+    {...own('upload', ICON.clip), tip: 'Attach image or file'}, insertTool(), '|',
     own('undo', ICON.undo), own('redo', ICON.redo), '|', own('outline', ICON.outline), writingTool()];
+}
+// the less frequent formats live in one Insert menu, so the formatting row stays a single line
+function insertTool(){
+  const wrap = (label, ic, pre, suf, ph) => [label, () => wrapInline(pre, suf, ph), {icon: ic}];
+  const put = (label, ic, name = label) => [label, () => insertBlockHere(name), {icon: ic}];
+  return {name: 'insert', tip: 'Insert', icon: `${icon(ICON.plus)}${icon(ICON.down)}`, click(){
+    const r = document.querySelector('.vditor-toolbar [data-type=insert]').getBoundingClientRect();
+    showMenu(r.left, r.bottom + 4, ['Inline', wrap('Superscript', ICON.sup, '^', '^', '2'), wrap('Subscript', ICON.sub, '~', '~', '2'),
+      wrap('Inline math', ICON.sigma, '$', '$', 'x^2'), '-', 'Blocks', put('Callout', ICON.info), put('Math block', ICON.mathbox),
+      put('Diagram', ICON.diagram, 'Flowchart'), put('Divider', ICON.divider), put('Footnote', ICON.asterisk), put('Table of contents', ICON.toc)]);
+  }};
 }
 // wrap the selection (or a placeholder) in inline markers, e.g. ==text==; the caret lands before the closing marker
 function wrapInline(pre, suf, ph){
@@ -945,6 +959,7 @@ function openSub(b, items){
 }
 function closeSub(){ $('#sub').style.display = 'none'; $('#ctx .open')?.classList.remove('open'); }
 function hideMenu(){ closeSub(); $('#ctx').style.display = 'none'; $('#export').setAttribute('aria-expanded', 'false'); $('#blockBtn').setAttribute('aria-expanded', 'false'); }
+for (const m of [$('#ctx'), $('#sub')]) m.addEventListener('mousedown', e => e.preventDefault()); // keep the editor's caret and selection
 for (const m of [$('#ctx'), $('#sub')]) m.addEventListener('keydown', e => {
   const bs = [...m.querySelectorAll('button')], cur = document.activeElement, i = bs.indexOf(cur);
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus(); }
@@ -1164,11 +1179,11 @@ const WELCOME = `# Welcome to MDView
 
 You're in **View mode**: select and copy freely, nothing changes.
 
-- **Edit** (⌘2) edits inline like Typora. Type \`/\` on an empty line to insert any block. Paste, drop or attach (📎) images and files.
-- **Blocks**: hover a block and click the badge in its margin (¶, H1…) to duplicate it (⇧⌘P), turn it into another kind (⌥⌘0–6, ⌥⌘Q, ⌥⇧⌘O/U/X), add a paragraph below (⇧⌘N) or delete it (⇧⌘D). Drag the badge to move the block.
+- **Edit** (⌘2) edits inline like Typora. Type \`/\` on an empty line to insert any block. Paste, drop or attach images and files.
+- **Blocks**: click the badge in a block's margin (¶, H1…) to duplicate it, turn it into another kind or delete it; its menu lists the shortcuts. Drag the badge to move the block.
 - **Source** (⌘3) switches writing to raw markdown. Pick Standard, Source, Typewriter or Focus mode from the dropdown at the end of the formatting row.
 - **Tabs**: ⌘T new tab, ⌘W close, Ctrl+Tab to switch. Double-click a tab to rename the file, drag to reorder, right-click to move it to a new window.
-- **Settings** (⌘,) has themes, writing modes, auto-save and more. Changes apply live.
+- **Settings** (⌘,) has themes, text and code styles, auto-save and more. Changes apply live.
 
 Math $E = mc^2$, ==highlight==, H~2~O, x^2^, footnotes[^1], and diagrams:
 
