@@ -7,135 +7,373 @@
 <link rel="stylesheet" href="vditor/dist/index.css">
 <script src="vditor/dist/index.min.js"></script>
 <style>
-:root{--bg:#fff;--fg:#1f2328;--mute:#656d76;--line:#d0d7de;--panel:#f6f8fa;--accent:#0969da;
-  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,monospace;--code-size:14px;--tab:4}
-:root[data-theme=dark]{--bg:#1d2125;--fg:#d1d5da;--mute:#8d96a0;--line:#30363d;--panel:#24292e;--accent:#4493f8}
-:root[data-theme=material]{--bg:#263238;--fg:#eeffff;--mute:#89a2ab;--line:#37474f;--panel:#2e3c43;--accent:#82aaff}
-:root[data-theme=onedark]{--bg:#282c34;--fg:#abb2bf;--mute:#7f848e;--line:#3e4451;--panel:#21252b;--accent:#61afef}
+/* ---- design tokens: chrome (panel) sits a step away from the document (bg), like a macOS sidebar ---- */
+:root{--bg:#fff;--fg:#1f2328;--mute:#6b7079;--line:#e3e4e8;--panel:#f7f7f8;--hover:#ebebee;--raised:#fff;--accent:#0969da;--accent-soft:#0969da1f;
+  --shadow:0 10px 30px #0000001f,0 0 0 1px #0000000d;--ui:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",sans-serif;
+  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,monospace;--code-size:14px;--tab:4;
+  --gutter:clamp(16px,5vw,40px);accent-color:var(--accent)}
+:root[data-theme=dark]{--bg:#1d2125;--fg:#d1d5da;--mute:#8b949e;--line:#30363d;--panel:#171a1d;--hover:#2a2f35;--raised:#353b43;--accent:#4493f8;--accent-soft:#4493f833;--shadow:0 10px 30px #00000073,0 0 0 1px #ffffff14}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;flex-direction:column}
-header{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
-header .spacer{margin-right:auto}
-button,select,input[type=text],textarea{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
-button,select{cursor:pointer}
-button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-.group{display:flex}.group button{border-radius:0;margin-left:-1px}.group button:first-child{border-radius:6px 0 0 6px}.group button:last-child{border-radius:0 6px 6px 0}
-/* tabs */
-#tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex:none}
-.tab{display:flex;align-items:center;gap:2px;padding:0 4px 0 12px;height:32px;font-size:13px;border-right:1px solid var(--line);cursor:default;max-width:220px;color:var(--mute);white-space:nowrap;user-select:none;flex:none}
-.tab .tn{overflow:hidden;text-overflow:ellipsis}
-.tab.cur{background:var(--bg);color:var(--fg);box-shadow:inset 0 2px 0 var(--accent)}
-.tab.over{box-shadow:inset 3px 0 0 var(--accent)}
-.tab .x{border:0;background:none;padding:0;width:20px;height:20px;border-radius:4px;visibility:hidden;color:var(--mute);font-size:15px;line-height:1}
-.tab .x:hover{background:var(--line)}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 var(--ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.vh{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+[contenteditable]:focus-visible{outline:0} /* the writing surface itself */
+
+/* ---- controls ---- */
+button,select,input[type=text],textarea{font:inherit;color:var(--fg)}
+button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--raised);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s,border-color .12s}
+button:hover{background:var(--hover)}
+button.on,button.on:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+button.icon{width:30px;height:30px;padding:0;border:0;background:none;color:var(--mute);position:relative}
+button.icon:hover,button.icon[aria-expanded=true]{background:var(--hover);color:var(--fg)}
+select,input[type=text],textarea{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+select{height:28px;cursor:pointer}
+textarea{resize:vertical;font:12px/1.5 var(--code-font)}
+input[type=text]:focus,textarea:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+kbd{font:inherit;font-size:11px;opacity:.7}
+/* segmented control (mode switch, font, paper) */
+.seg{display:inline-flex;padding:2px;gap:2px;border-radius:8px;background:var(--hover)}
+.seg>button,.seg>label>span{height:26px;padding:0 10px;border:0;border-radius:6px;background:none;color:var(--mute);display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.seg>button:hover,.seg>label>span:hover{background:none;color:var(--fg)}
+.seg>button.on,.seg>label>input:checked+span{background:var(--raised);color:var(--fg);box-shadow:0 1px 2px #0000001f,0 0 0 .5px #0000000f}
+.seg>label>input:focus-visible+span{outline:2px solid var(--accent)}
+.seg.full{display:flex}.seg.full>label{flex:1}.seg.full>label>span{width:100%}
+/* toggle switch */
+.switch{appearance:none;-webkit-appearance:none;flex:none;width:30px;height:18px;margin:0;border-radius:9px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0000004d;transition:transform .15s}
+.switch:checked{background:var(--accent)}.switch:checked::after{transform:translateX(12px)}
+/* slider */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;margin:4px 0 0;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:#fff;border:.5px solid #0000002e;box-shadow:0 1px 3px #0000004d}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:.5px solid #0000002e;box-shadow:0 1px 3px #0000004d}
+
+/* ---- app layout: [files sidebar] [bar / document / status] [settings panel] ---- */
+.app{display:flex;height:100%;position:relative}
+.pane{flex:1;min-width:0;display:flex;flex-direction:column}
+.side{flex:none;width:250px;display:none;flex-direction:column;background:var(--panel)}
+#side{border-right:1px solid var(--line)}#settings{width:290px;border-left:1px solid var(--line)}
+body.tree #side,#settings.open{display:flex}
+.side-head{flex:none;height:41px;display:flex;align-items:center;gap:4px;padding:0 6px 0 14px;border-bottom:1px solid var(--line)}
+/* the sidebar toggle stays pinned top-left whether the sidebar is open or not */
+#tTree{position:absolute;top:6px;left:8px;z-index:110}
+#side .side-head{padding-left:46px}
+.side-head h2{flex:1;margin:0;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* bar: tabs + actions in one row */
+#bar{flex:none;height:41px;display:flex;align-items:flex-end;gap:4px;padding:0 8px 0 46px;background:var(--panel);box-shadow:inset 0 -1px 0 var(--line)}
+#bar>.icon,.actions{align-self:center}
+.actions{display:flex;align-items:center;gap:2px;flex:none}
+.actions .sep{width:1px;height:18px;background:var(--line);margin:0 6px}
+#save.dirty::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+
+/* tabs: the active tab joins the page below it */
+#tabs{flex:1;min-width:0;display:flex;align-items:flex-end;gap:2px;height:100%;overflow-x:auto;scrollbar-width:none;padding-left:4px}
+#tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 1 190px;min-width:96px;height:32px;margin-bottom:4px;display:flex;align-items:center;gap:4px;padding:0 4px 0 12px;border-radius:7px;color:var(--mute);cursor:default;user-select:none;-webkit-user-select:none;position:relative}
+.tab:hover{background:var(--hover);color:var(--fg)}
+.tab.cur{height:36px;margin-bottom:0;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:var(--bg);color:var(--fg);font-weight:500}
+.tab.over::before{content:"";position:absolute;left:-2px;top:6px;bottom:6px;width:2px;border-radius:1px;background:var(--accent)}
+.tab .tn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab .x{width:20px;height:20px;padding:0;border:0;border-radius:4px;background:none;color:var(--mute);visibility:hidden}
+.tab .x svg{width:13px;height:13px}
+.tab .x:hover{background:var(--line);color:var(--fg)}
 .tab:hover .x,.tab.cur .x,.tab.dirty .x{visibility:visible}
-.tab.dirty:not(:hover) .x{font-size:0}
-.tab.dirty:not(:hover) .x::after{content:"●";font-size:10px}
-.tab input{font:inherit;width:150px;padding:1px 4px;border-radius:4px}
-#newTab{border:0;background:none;padding:0 12px;font-size:17px;color:var(--mute);border-radius:0}
-#newTab:hover{color:var(--fg)}
-.menu{display:none;position:fixed;min-width:190px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #0003;z-index:300}
-.menu button{display:block;width:100%;text-align:left;border:0;border-radius:4px;background:none;padding:6px 10px}
-.menu button:hover{background:var(--panel)}
-dialog{border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);padding:18px 20px;width:min(380px,calc(100vw - 32px))}
-dialog::backdrop{background:#0005}
-dialog h3{margin:0 0 6px;font-size:15px}dialog p{margin:0 0 16px;font-size:13px;color:var(--mute)}
-dialog .row{display:flex;gap:8px;justify-content:flex-end}
-/* layout */
-.wrap{flex:1;min-height:0;display:flex}
+.tab.dirty:not(:hover) .x svg{display:none}
+.tab.dirty:not(:hover) .x::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.tab input{font:inherit;width:100%;height:22px;padding:0 4px}
+#newTab{flex:none;width:28px;height:28px;margin-bottom:6px}
+
+/* document */
+.body{flex:1;min-height:0;display:flex}
 main{flex:1;min-width:0;position:relative}
-#tree{width:240px;flex:none;overflow:auto;border-right:1px solid var(--line);background:var(--panel);font-size:13px;padding:8px 4px;display:none}
-body.tree #tree{display:block}
-#tree summary,#tree a{display:block;padding:3px 8px;border-radius:4px;cursor:pointer;color:var(--fg);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tree a:hover,#tree summary:hover{background:var(--line)}#tree a.cur{background:var(--accent);color:#fff}
-#tree details details,#tree details>a{margin-left:12px}
-#tree .hint{color:var(--mute);padding:8px}
-#out{position:absolute;inset:0;overflow:auto;padding:24px 16px}
-#editor{height:100%;border:0!important}
+#out{position:absolute;inset:0;overflow:auto;padding:48px var(--gutter) 30vh}
+#editor{height:100%}
 body.read #editor,body.edit #out,body.source #out{display:none}
-/* live settings apply to reader, inline editor and source editor */
 #doc,.vditor-reset{font-family:var(--font)!important;font-size:var(--size)!important;line-height:var(--lh)!important;color:var(--fg)}
 #doc code,#doc pre,.vditor-reset code,.vditor-reset pre,.vditor-sv{font-family:var(--code-font)!important;tab-size:var(--tab)}
+/* code colors (Settings › Code): the text and background of code blocks and inline code */
+.vditor-reset pre>code,.vditor-reset pre>code.hljs{background:var(--code-bg)!important;color:var(--code-fg)!important}
+.vditor-reset :not(pre)>code{background:var(--icode-bg)!important;color:var(--icode-fg)!important}
+/* the three code styles, each with a light and a dark variant: block bg / text, inline bg / text */
+:root{--code-bg:#f6f8fa;--code-fg:#1f2328;--icode-bg:#818b981f;--icode-fg:#1f2328}
+:root[data-theme=dark]{--code-bg:#161b22;--code-fg:#e6edf3;--icode-bg:#656c7633;--icode-fg:#e6edf3}
+:root[data-code=vscode]{--code-bg:#1e1e1e;--code-fg:#d4d4d4;--icode-bg:#1e1e1e;--icode-fg:#d4d4d4}
+:root[data-code=red]{--code-bg:#f7f6f3;--code-fg:#37352f;--icode-bg:#87837826;--icode-fg:#eb5757}
+:root[data-code=red][data-theme=dark]{--code-bg:#252525;--code-fg:#e6e6e6;--icode-bg:#87837826;--icode-fg:#ff7369}
 #doc pre code,.vditor-reset pre code,.vditor-sv{font-size:var(--code-size)!important}
-#doc{max-width:var(--width);margin:0 auto}
-.vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:var(--width);margin:0 auto;padding-left:24px!important;padding-right:24px!important}
-.vditor,.vditor-toolbar,.vditor-reset,.vditor-sv{background:var(--bg)!important;color:var(--fg)}
-.vditor-toolbar{border-bottom:1px solid var(--line)!important;padding-left:8px!important}
+#doc{max-width:var(--width);margin:0 auto;padding:0}
+/* empty document */
+#empty{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:60%;text-align:center;color:var(--mute);font-size:14px}
+#empty>svg{width:44px;height:44px;stroke-width:1.2;margin-bottom:8px;opacity:.7}
+#empty h2{margin:0;font-size:18px;font-weight:600;color:var(--fg)}#empty p{margin:0 0 14px}
+#empty .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+body.empty #empty{display:flex}body.empty #doc{display:none}
+
+/* editor (Vditor), themed through its own variables so it reads as part of the page.
+   Edit and Source use the same centered column as View, so switching modes doesn't move the text. */
+.vditor{--border-color:var(--line);--second-color:var(--line);--panel-background-color:var(--bg);--panel-shadow:var(--shadow);--toolbar-background-color:var(--bg);--toolbar-icon-color:var(--mute);--toolbar-icon-hover-color:var(--fg);--textarea-background-color:var(--bg);--textarea-text-color:var(--fg);--toolbar-height:30px;--toolbar-divider-margin-top:7px;border:0!important;border-radius:0!important;background:var(--bg)}
+.vditor-toolbar{display:flex;flex-wrap:wrap;justify-content:center;padding:5px 12px!important;border-bottom:1px solid var(--line)!important}
+.vditor-toolbar__item .vditor-tooltipped{width:28px;padding:0;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.vditor-toolbar__item .vditor-tooltipped:hover{background:var(--hover)}
+.vditor-toolbar__divider{margin:7px 6px!important}
+.vditor-toolbar svg.i{fill:none}
+/* writing-mode dropdown in the formatting row: current mode's name + chevron */
+.vditor-toolbar__item .vditor-tooltipped[data-type=insert]{width:auto;gap:2px;padding:0 6px}
+.vditor-toolbar [data-type=insert] svg:last-child{width:12px;height:12px;color:var(--mute)}
+.vditor-toolbar [data-type=insert]::before,.vditor-toolbar [data-type=insert]::after{display:none}
+.menu{user-select:none;-webkit-user-select:none}
+#editor{container-type:inline-size}
+@container (max-width:780px){.vditor-toolbar [data-type=wm] span{display:none}} /* narrow editor: the mode's icon + chevron */
+.vditor-toolbar__item .vditor-tooltipped[data-type=wm]{width:auto;gap:6px;padding:0 8px;color:var(--fg)}
+.vditor-toolbar [data-type=wm] span{font-size:12px;white-space:nowrap}
+.vditor-toolbar [data-type=wm]::before,.vditor-toolbar [data-type=wm]::after{display:none} /* its label says it; no tooltip over it */
+.vditor-toolbar [data-type=wm] svg:last-child{width:12px;height:12px;color:var(--mute)}
+.vditor-sv:focus{box-shadow:none!important} /* the writing surface, not a form field */
+/* the scroller spans the full width (scrollbar at the window edge); padding centres the text column */
+.vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:none;margin:0!important;padding:40px max(var(--gutter), calc((100% - var(--width)) / 2)) 30vh!important}
+.vditor-sv{max-width:none;margin:0!important;padding:48px max(var(--gutter), calc((100% - var(--width)) / 2)) 30vh!important;color:var(--fg)!important;background:var(--bg)!important}
+/* Settings › Alignment: Left pins the text column to the left edge instead of centring it */
+body.left #doc{margin:0}
+body.left .vditor-ir .vditor-reset,body.left .vditor-wysiwyg .vditor-reset,body.left .vditor-sv{padding-left:var(--gutter)!important;padding-right:max(var(--gutter), calc(100% - var(--width) - var(--gutter)))!important}
+.vditor-outline{background:var(--panel)!important}
 /* focus mode: dim every block except the one holding the caret */
 body.focus .vditor-reset>*{opacity:.25;transition:opacity .15s}
 body.focus .vditor-reset>.md-active{opacity:1}
-footer{display:flex;gap:16px;justify-content:flex-end;padding:3px 12px;border-top:1px solid var(--line);background:var(--panel);color:var(--mute);font-size:12px}
-.pop{display:none;position:fixed;right:12px;top:52px;width:280px;max-height:calc(100vh - 90px);overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 8px 24px #0003;z-index:100}
-.pop.open{display:block}
-.pop label{display:block;font-size:13px;margin-bottom:10px}
-.pop input[type=range],.pop select,.pop textarea,.pop input[type=text]{width:100%;margin-top:4px}
-.pop h4{margin:14px 0 8px;font-size:12px;text-transform:uppercase;color:var(--mute)}
-.pop .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-#drop{display:none;position:fixed;inset:0;background:#0969da33;border:3px dashed var(--accent);z-index:200;pointer-events:none}
-body.ql header,body.ql footer,body.ql #tree,body.ql #tabs{display:none!important}
-@media print{header,footer,#tabs,#tree,#editor,.pop,.menu{display:none!important}#out{position:static;overflow:visible;display:block!important}}
+
+/* block button: badge in the left margin of the caret's block; click for actions, drag to move */
+[hidden]{display:none!important}
+#blockBtn svg{width:15px;height:15px}
+#blockBtn{position:fixed;z-index:40;width:26px;height:22px;padding:0;border:0;border-radius:5px;background:none;color:var(--mute);font:600 11px var(--ui);cursor:grab}
+#blockBtn:hover,#blockBtn[aria-expanded=true]{background:var(--hover);color:var(--fg)}
+#dropLine{position:fixed;z-index:40;height:2px;border-radius:1px;background:var(--accent);pointer-events:none}
+.vditor-reset>.dragging{opacity:.35}
+.vditor-ir>.vditor-reset>:is(h1,h2,h3,h4,h5,h6)::before{display:none} /* Vditor's own H1–H6 labels; the block button replaces them */
+
+/* find bar (floats over the top right of the document) */
+#find{display:none;position:absolute;top:10px;right:18px;z-index:50;width:min(380px,calc(100% - 24px));padding:8px;border-radius:10px;background:var(--raised);box-shadow:var(--shadow);flex-direction:column;gap:6px}
+#find.open{display:flex}
+body:not(.read) #find{top:52px} /* below the formatting toolbar */
+#find .frow{display:flex;align-items:center;gap:4px}
+#find input[type=text]{flex:1;min-width:0;height:28px}
+#fcount{flex:none;min-width:0;max-width:110px;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+#fcount:empty{display:none}
+.tog{flex:none;height:28px;min-width:28px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;color:var(--mute);font:600 12px var(--code-font);cursor:pointer}
+.tog:hover{background:var(--hover);color:var(--fg)}
+.tog:has(:checked){background:var(--accent-soft);color:var(--accent)}
+.tog:has(:focus-visible){outline:2px solid var(--accent)}
+#find .icon{width:28px;height:28px}
+#fall{flex:none}
+
+/* files sidebar */
+#tree{flex:1;overflow:auto;padding:6px}
+#tree a{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-radius:6px;color:var(--fg);white-space:nowrap;cursor:pointer}
+#tree a span{flex:1;overflow:hidden;text-overflow:ellipsis}
+#tree a svg{color:var(--mute)}
+#tree a:hover{background:var(--hover)}
+#tree a.cur{background:var(--accent-soft);color:var(--accent)}#tree a.cur svg{color:var(--accent)}
+#tree a.dirty::after{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--mute)}
+
+/* settings panel */
+#settings .scroll{flex:1;overflow:auto;padding:4px 16px 24px}
+#settings h3{margin:20px 0 10px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
+.field{display:block;margin-bottom:14px}
+.fl{display:flex;justify-content:space-between;margin-bottom:6px}
+.fl output{color:var(--mute);font-variant-numeric:tabular-nums}
+.toggle{display:flex;align-items:center;gap:12px;margin-bottom:14px;cursor:pointer}
+.toggle>span{flex:1}.toggle small{display:block;color:var(--mute);font-size:12px;margin-top:1px}
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 8px;margin-bottom:16px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--mute);cursor:pointer}
+.sw:has(:checked){color:var(--fg);font-weight:500}
+.thumb{display:block;width:100%;height:46px;border-radius:7px;background:var(--t-bg);box-shadow:0 0 0 1px var(--line);position:relative;overflow:hidden}
+.thumb::before{content:"";position:absolute;left:0;top:0;bottom:0;width:28%;background:var(--t-panel)}
+.thumb::after{content:"";position:absolute;left:38%;right:14%;top:12px;height:4px;border-radius:2px;background:var(--t-fg);box-shadow:0 9px 0 var(--t-mute),0 18px 0 var(--t-accent)}
+.thumb.sys{background:linear-gradient(135deg,#fff 50%,#1d2125 50%)}.thumb.sys::before,.thumb.sys::after{display:none}
+.sw:has(:checked) .thumb{box-shadow:0 0 0 2px var(--accent)}
+.sw:has(:focus-visible) .thumb{outline:2px solid var(--accent);outline-offset:2px}
+
+/* status bar */
+#status{flex:none;height:26px;display:flex;align-items:center;gap:16px;padding:0 12px;border-top:1px solid var(--line);color:var(--mute);font-size:12px}
+#saveState{display:none;flex:none;height:20px;padding:0 6px;margin:0 -10px 0 -6px;border:0;background:none;color:var(--fg);font-size:12px}
+#saveState.dirty{display:block}#saveState::before{content:"● ";color:var(--accent)}#saveState:hover{background:var(--hover)}
+#path{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:text;-webkit-user-select:text;cursor:copy}
+#path:hover{color:var(--fg)}#path.copied::after{content:" — Copied";color:var(--accent)}
+#stats{margin-left:auto;flex:none;font-variant-numeric:tabular-nums}
+
+/* menus and dialogs, macOS-style */
+.menu{display:none;position:fixed;min-width:200px;padding:5px;border-radius:9px;background:var(--raised);box-shadow:var(--shadow);z-index:300}
+.menu button{display:flex;justify-content:flex-start;gap:10px;width:100%;height:30px;padding:0 10px;border:0;border-radius:6px;background:none}
+.menu button:hover,.menu button:focus-visible,.menu button.open{background:var(--hover);outline:0}
+.menu .mi{flex:none;width:18px;display:inline-flex;justify-content:center;color:var(--mute);font-size:11px;font-weight:600}
+.menu .ml{flex:1;text-align:left}
+.menu kbd{padding-left:24px;color:var(--mute);opacity:1}
+.menu .mc svg{width:12px;height:12px;color:var(--mute)}
+.menu .mc .ck{width:14px;height:14px;color:var(--accent)}
+/* Quick Insert palette ("/" on an empty line) */
+#slash{width:320px;max-height:min(380px,55vh);overflow:auto}
+#slash .mh{padding:8px 10px 4px}
+#slash button{height:auto;min-height:44px;padding:5px 8px}
+#slash button:hover{background:none}#slash button.sel{background:var(--hover)}
+#slash .mi{width:32px;height:32px;align-items:center;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg);font-size:12px}
+#slash .ml small{display:block;margin-top:1px;color:var(--mute);font-size:11px}
+#slash .none{padding:10px;color:var(--mute)}
+.menu button.danger,.menu button.danger .mi{color:#e5484d}
+.menu hr{border:0;border-top:1px solid var(--line);margin:5px 4px}
+.menu .mh{padding:4px 10px 2px;font-size:11px;font-weight:600;color:var(--mute)}
+dialog{width:min(360px,calc(100vw - 32px));padding:20px;border:0;border-radius:12px;background:var(--raised);color:var(--fg);box-shadow:var(--shadow)}
+dialog::backdrop{background:#0000004d}
+dialog h3{margin:0 0 6px;font-size:14px;font-weight:600}dialog p{margin:0 0 18px;color:var(--mute);line-height:1.5}
+dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min-width:84px}
+#drop{display:none;position:fixed;inset:8px;border:2px dashed var(--accent);border-radius:12px;background:var(--accent-soft);z-index:200;pointer-events:none}
+#drop::after{content:"Drop Markdown files to open them";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 18px;border-radius:8px;background:var(--raised);box-shadow:var(--shadow);font-size:14px}
+
+/* narrower windows: icon-only modes, sidebars float over the document, then tabs get their own row */
+@media (max-width:900px){.seg.modes>button span{display:none}.seg.modes>button{padding:0 8px}}
+@media (max-width:720px){
+  .app{position:relative}
+  #side,#settings{position:absolute;top:0;bottom:0;z-index:100;box-shadow:var(--shadow)}
+  #side{left:0}#settings{right:0}
+}
+@media (max-width:560px){
+  #bar{height:auto;flex-wrap:wrap;padding-top:6px;row-gap:6px}
+  #bar>.actions{margin-left:auto}
+  #tabs{order:3;flex-basis:100%;height:40px;margin:0 -8px;padding:0 8px}
+  .actions .sep{margin:0 2px}
+}
+body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{display:none!important}
+@media print{#side,#bar,#status,#settings,#find,#editor,#empty,.menu{display:none!important}body,.app{height:auto;overflow:visible;display:block}#out{position:static;overflow:visible;display:block!important;padding:0}}
 </style>
 <style id="userCss"></style>
 </head>
 <body class="read">
-<header>
-  <button id="tTree" title="Files sidebar (⌘\)" aria-label="Files">☰</button>
-  <span class="spacer"></span>
-  <div class="group">
-    <button id="mRead" class="on" title="Read only: select and copy without editing (⌘1)">View</button>
-    <button id="mEdit" title="Inline WYSIWYG editing (⌘2). Type / for blocks.">Edit</button>
-    <button id="mSource" title="Raw markdown (⌘3)">Source</button>
+<div class="app">
+  <button id="tTree" class="icon" title="Open documents (⌘\)" aria-label="Open documents sidebar" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>
+  <aside id="side" class="side" aria-label="Open documents">
+    <div class="side-head">
+      <h2>Open documents</h2>
+    </div>
+    <nav id="tree"></nav>
+  </aside>
+
+  <div class="pane">
+    <header id="bar">
+      <nav id="tabs" aria-label="Open documents" role="tablist"></nav>
+      <div class="actions">
+        <div class="seg modes" role="group" aria-label="Mode">
+          <button id="mRead" class="on" title="View: read and copy without editing (⌘1)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>View</span></button>
+          <button id="mEdit" title="Edit inline, like a document (⌘2). Type / for blocks."><svg class="i" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit</span></button>
+          </div>
+        <span class="sep"></span>
+        <button id="open" class="icon" title="Open… (⌘O)" aria-label="Open file"><svg class="i" viewBox="0 0 24 24"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg></button>
+        <button id="save" class="icon" title="Save (⌘S)" aria-label="Save"><svg class="i" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button>
+        <button id="export" class="icon" title="Export or copy" aria-label="Export or copy" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg></button>
+        <span class="sep"></span>
+        <button id="tFind" class="icon" title="Find &amp; replace (⌘F)" aria-label="Find and replace" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button id="gear" class="icon" title="Appearance &amp; settings" aria-label="Settings" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></button>
+      </div>
+    </header>
+
+    <div class="body">
+      <main>
+        <div id="out"><article id="doc" class="vditor-reset"></article>
+          <div id="empty">
+            <svg class="i" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+            <h2>Nothing here yet</h2>
+            <p>Start writing, open a Markdown file, or drop one onto the window.</p>
+            <div class="row"><button class="on" data-go="edit">Start writing <kbd>⌘2</kbd></button><button data-go="open">Open file… <kbd>⌘O</kbd></button></div>
+          </div>
+        </div>
+        <div id="editor"></div>
+        <button id="blockBtn" hidden draggable="true" title="Click for block actions, drag to move" aria-label="Block actions" aria-haspopup="menu"></button>
+        <div id="dropLine" hidden></div>
+        <div id="find" role="search" aria-label="Find and replace">
+          <div class="frow">
+            <input type="text" id="fq" placeholder="Find" aria-label="Find">
+            <span id="fcount" aria-live="polite"></span>
+            <label class="tog" title="Match case"><input type="checkbox" id="fcase" class="vh">Aa</label>
+            <label class="tog" title="Regular expression"><input type="checkbox" id="fre" class="vh">.*</label>
+            <button id="fnext" class="icon" title="Find next (Enter)" aria-label="Find next"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+            <button id="fclose" class="icon" title="Close (Esc)" aria-label="Close find"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <div class="frow">
+            <input type="text" id="fr" placeholder="Replace" aria-label="Replace with">
+            <button id="fall">Replace all</button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <footer id="status"><button id="saveState">Unsaved changes</button><span id="path" title="Click to copy path"></span><span id="stats"></span></footer>
   </div>
-  <button id="open">Open</button>
-  <button id="save">Save</button>
-  <select id="export" aria-label="Export and copy"><option value="">Export…</option>
-    <option value="html">Export HTML</option><option value="pdf">Export PDF</option><option value="md">Export Markdown</option>
-    <option value="c-md">Copy as Markdown</option><option value="c-html">Copy as HTML</option><option value="c-text">Copy as plain text</option><option value="c-rich">Copy as rich text</option></select>
-  <button id="tFind" title="Find & replace (⌘F)" aria-label="Find">⌕</button>
-  <button id="gear" aria-label="Settings">⚙</button>
-</header>
-<nav id="tabs" aria-label="Open documents"></nav>
-<div class="wrap">
-  <nav id="tree"></nav>
-  <main><div id="out"><article id="doc" class="vditor-reset"></article></div><div id="editor"></div></main>
+
+  <aside id="settings" class="side" aria-label="Settings">
+    <div class="side-head">
+      <h2>Appearance &amp; settings</h2>
+      <button id="closeSettings" class="icon" title="Close" aria-label="Close settings"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="scroll">
+      <h3>Theme</h3>
+      <div class="swatches" role="radiogroup" aria-label="Theme">
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value=""><span class="thumb sys"></span>Auto</label>
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value="light"><span class="thumb" style="--t-bg:#fff;--t-panel:#f7f7f8;--t-fg:#1f2328;--t-mute:#c8cbd0;--t-accent:#0969da"></span>Light</label>
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value="dark"><span class="thumb" style="--t-bg:#1d2125;--t-panel:#171a1d;--t-fg:#d1d5da;--t-mute:#4a525b;--t-accent:#4493f8"></span>Dark</label>
+      </div>
+
+      <h3>Text</h3>
+      <div class="field"><div class="fl">Typeface</div>
+        <div class="seg full" role="radiogroup" aria-label="Typeface">
+          <label><input class="vh" type="radio" name="font" data-k="font" value="-apple-system,system-ui,sans-serif"><span style="font-family:-apple-system,system-ui,sans-serif">Sans</span></label>
+          <label><input class="vh" type="radio" name="font" data-k="font" value="Georgia,'Times New Roman',serif"><span style="font-family:Georgia,serif">Serif</span></label>
+          <label><input class="vh" type="radio" name="font" data-k="font" value="ui-monospace,Menlo,monospace"><span style="font-family:ui-monospace,Menlo,monospace">Mono</span></label>
+        </div></div>
+      <label class="field"><span class="fl">Font size <output></output></span><input type="range" min="12" max="24" data-k="size" data-u="px"></label>
+      <label class="field"><span class="fl">Line height <output></output></span><input type="range" min="1.2" max="2.2" step="0.1" data-k="lh"></label>
+      <label class="field"><span class="fl">Page width <output></output></span><input type="range" min="500" max="1400" step="20" data-k="width" data-u="px"></label>
+      <div class="field"><div class="fl">Alignment</div>
+        <div class="seg full" role="radiogroup" aria-label="Alignment">
+          <label><input class="vh" type="radio" name="align" data-k="align" value="center"><span>Centered</span></label>
+          <label><input class="vh" type="radio" name="align" data-k="align" value="left"><span>Left</span></label>
+        </div></div>
+
+      <h3>Code</h3>
+      <div class="field"><div class="fl">Code colors</div>
+      <div class="swatches" role="radiogroup" aria-label="Code colors">
+        <label class="sw"><input class="vh" type="radio" name="codecolors" data-k="code-colors" value="github"><span class="thumb" style="--t-bg:#f6f8fa;--t-panel:#f6f8fa;--t-fg:#1f2328;--t-mute:#1f23288c;--t-accent:#cf222e"></span>GitHub</label>
+        <label class="sw"><input class="vh" type="radio" name="codecolors" data-k="code-colors" value="vscode"><span class="thumb" style="--t-bg:#1e1e1e;--t-panel:#1e1e1e;--t-fg:#d4d4d4;--t-mute:#d4d4d48c;--t-accent:#569cd6"></span>VS Code</label>
+        <label class="sw"><input class="vh" type="radio" name="codecolors" data-k="code-colors" value="red"><span class="thumb" style="--t-bg:#f7f6f3;--t-panel:#f7f6f3;--t-fg:#37352f;--t-mute:#37352f8c;--t-accent:#eb5757"></span>Red Accent</label>
+      </div></div>
+      <label class="field"><span class="fl">Code font</span><select data-k="code-font"><option value="ui-monospace,Menlo,monospace">SF Mono / Menlo</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
+      <label class="field"><span class="fl">Code size <output></output></span><input type="range" min="11" max="20" data-k="code-size" data-u="px"></label>
+      <label class="field"><span class="fl">Tab width <output></output></span><input type="range" min="2" max="8" step="2" data-k="tab"></label>
+
+
+      <h3>Editor</h3>
+      <label class="toggle"><span>Outline<small>Table of contents beside the editor</small></span><input type="checkbox" class="switch" data-k="outline"></label>
+      <label class="field"><span class="fl">Auto-save</span><select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
+      <label class="field"><span class="fl">Save pasted images to</span><select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
+
+      <h3>PDF export</h3>
+      <div class="field"><div class="fl">Page size</div>
+        <div class="seg full" role="radiogroup" aria-label="Page size">
+          <label><input class="vh" type="radio" name="paper" data-k="paper" value="a4"><span>A4</span></label>
+          <label><input class="vh" type="radio" name="paper" data-k="paper" value="letter"><span>Letter</span></label>
+        </div></div>
+      <label class="field"><span class="fl">Margins <output></output></span><input type="range" min="5" max="40" data-k="margin" data-u="mm"></label>
+      <label class="toggle"><span>Page numbers<small>Title and page number in the header &amp; footer</small></span><input type="checkbox" class="switch" data-k="pagenums"></label>
+
+      <h3>Custom CSS</h3>
+      <textarea data-k="css" rows="5" placeholder="#doc h1 { color: tomato }" aria-label="Custom CSS"></textarea>
+    </div>
+  </aside>
 </div>
-<footer id="stats"></footer>
 
 <div class="menu" id="ctx" role="menu"></div>
+<div class="menu" id="sub" role="menu"></div>
+<div class="menu" id="slash" role="listbox" aria-label="Insert block"></div>
 <dialog id="ask"><form method="dialog"><h3></h3><p></p><div class="row"></div></form></dialog>
-
-<div class="pop" id="find">
-  <label>Find<input type="text" id="fq"></label>
-  <label>Replace with<input type="text" id="fr"></label>
-  <label><input type="checkbox" id="fre"> Regular expression</label>
-  <label><input type="checkbox" id="fcase"> Match case</label>
-  <div class="row"><button id="fnext">Find next</button><button id="fall">Replace all</button></div>
-  <p id="fcount" style="font-size:12px;color:var(--mute)"></p>
-</div>
-
-<div class="pop" id="settings">
-  <h4>Appearance</h4>
-  <label>Theme<select data-k="theme"><option value="">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="material">Material Dark</option><option value="onedark">One Dark</option></select></label>
-  <label>Font<select data-k="font"><option value="-apple-system,system-ui,sans-serif">Sans</option><option value="Georgia,'Times New Roman',serif">Serif</option><option value="ui-monospace,Menlo,monospace">Mono</option></select></label>
-  <label>Font size <span></span><input type="range" min="12" max="24" data-k="size" data-u="px"></label>
-  <label>Line height <span></span><input type="range" min="1.2" max="2.2" step="0.1" data-k="lh"></label>
-  <label>Page width <span></span><input type="range" min="500" max="1400" step="20" data-k="width" data-u="px"></label>
-  <label>Code font<select data-k="code-font"><option value="ui-monospace,Menlo,monospace">SF Mono / Menlo</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
-  <label>Code size <span></span><input type="range" min="11" max="20" data-k="code-size" data-u="px"></label>
-  <label>Tab width <span></span><input type="range" min="2" max="8" step="2" data-k="tab"></label>
-  <label>Custom CSS<textarea data-k="css" rows="4" placeholder="#doc h1 { color: tomato }"></textarea></label>
-  <h4>Writing</h4>
-  <label><input type="checkbox" data-k="typewriter"> Typewriter mode: keep the current line centered</label>
-  <label><input type="checkbox" data-k="focus"> Focus mode: dim everything but the current block</label>
-  <label><input type="checkbox" data-k="outline"> Outline (table of contents) sidebar</label>
-  <label>Auto-save<select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
-  <label>Save pasted images to<select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
-  <h4>PDF</h4>
-  <label>Page size<select data-k="paper"><option value="a4">A4</option><option value="letter">Letter</option></select></label>
-  <label>Margins <span></span><input type="range" min="5" max="40" data-k="margin" data-u="mm"></label>
-  <label><input type="checkbox" data-k="pagenums"> Page numbers (header &amp; footer)</label>
-</div>
 <div id="drop"></div>
 <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
 <script>
@@ -147,11 +385,49 @@ const QL = window.QL_MODE === true;  // set by the Quick Look extension
 const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
 const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
 const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
-const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0'};
+const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', align: 'center', 'code-colors': 'github', font: '-apple-system,system-ui,sans-serif', paper: 'a4'};
 const opt = k => store.get('set-' + k) ?? String(DEFAULTS[k] ?? '');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+if (!['', 'light', 'dark'].includes(opt('theme'))) store.set('set-theme', ''); // Material / One Dark were removed: back to Auto
 const themeName = () => opt('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 const dark = () => themeName() !== 'light';
+const icon = d => `<svg class="i" viewBox="0 0 24 24">${d}</svg>`;
+const ICON = {x: '<path d="M18 6 6 18M6 6l12 12"/>', plus: '<path d="M12 5v14M5 12h14"/>', chev: '<path d="m9 18 6-6-6-6"/>',
+  file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  turn: '<path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M8 16H3v5"/>',
+  para: '<path d="M13 4v16M17 4v16M19 4H9.5a4.5 4.5 0 0 0 0 9H13"/>',
+  trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>',
+  quote: '<path d="M17 6H3M21 12H8M21 18H8M3 12v6"/>',
+  ul: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  ol: '<path d="M10 6h11M10 12h11M10 18h11M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+  task: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/>',
+  code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+  typewriter: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  heading: '<path d="M6 12h12M6 20V4M18 20V4"/>',
+  bold: '<path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/>',
+  italic: '<path d="M19 4h-9M14 20H5M15 4 9 20"/>',
+  strike: '<path d="M16 4H9a3 3 0 0 0-2.83 4M14 12a4 4 0 0 1 0 8H6M4 12h16"/>',
+  marker: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+  sup: '<path d="m4 19 8-8M12 19l-8-8M20 12h-4c0-1.5.44-2 1.5-2.5S20 8.33 20 7c0-.47-.17-.93-.48-1.29a2.1 2.1 0 0 0-2.62-.44c-.42.24-.74.62-.9 1.07"/>',
+  sub: '<path d="m4 5 8 8M12 5l-8 8M20 19h-4c0-1.5.44-2 1.5-2.5S20 15.33 20 14c0-.47-.17-.93-.48-1.29a2.1 2.1 0 0 0-2.62-.44c-.42.24-.74.62-.9 1.07"/>',
+  sigma: '<path d="M18 7V4H6l6 8-6 8h12v-3"/>',
+  mathbox: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M16 8.9V7H8l4 5-4 5h8v-1.9"/>',
+  checks: '<path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+  codeblock: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m10 9-3 3 3 3M14 15l3-3-3-3"/>',
+  clip: '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  asterisk: '<path d="M12 6v12M17.2 9 6.8 15M6.8 9l10.4 6"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+  outline: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M13 8h4M13 12h4M13 16h2"/>', down: '<path d="m6 9 6 6 6-6"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  table: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
+  divider: '<path d="M3 12h18"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  diagram: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 10v4a2 2 0 0 0 2 2h5"/>',
+  toc: '<path d="M3 6h18M7 12h14M11 18h10"/>',
+  focus: '<circle cx="12" cy="12" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>'};
 
 // ---- tab state: every open document is a tab {name, path, base, value, dirty, handle} ----
 let tabs = [], active = 0, editor = null, editorTab = null, ready = false, mode = 'read';
@@ -162,47 +438,106 @@ const T = () => tabs[active];
 const markdown = () => ({toc: true, footnotes: true, mark: true, sup: true, sub: true, gfmAutoLink: true, sanitize: true,
   codeBlockPreview: true, mathBlockPreview: true, autoSpace: false, fixTermTypo: false, linkBase: T()?.base || ''});
 const theme = () => ({current: dark() ? 'dark' : 'light', path: CDN + '/dist/css/content-theme'});
-const hljs = () => ({style: dark() ? 'native' : 'github', lineNumber: true});
+// not `hljs`: highlight.js declares that global, and a clash stops it loading
+// code style (Settings › Code): VS Code is dark in both themes, so it keeps VS Code's own syntax colors
+if (!['github', 'vscode', 'red'].includes(opt('code-colors'))) store.set('set-code-colors', 'github'); // older presets
+const hlOpts = () => ({style: opt('code-colors') === 'vscode' ? 'vs2015' : dark() ? 'github-dark' : 'github', lineNumber: true});
+// Vditor loads a code theme once; this swaps the stylesheet when the choice (or light/dark) changes
+const applyCodeTheme = () => Vditor.setCodeTheme(hlOpts().style, CDN);
 
 // ---- View mode ----
 function renderView(){
-  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hljs(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
+  document.body.classList.toggle('empty', !QL && !T().value.trim());
+  applyCodeTheme();
+  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
 }
+$('#empty').addEventListener('click', e => {
+  const go = e.target.closest('[data-go]')?.dataset.go;
+  if (go === 'edit') setMode('edit'); else if (go === 'open') $('#open').click();
+});
 
 // ---- Edit (inline WYSIWYG) and Source (raw markdown) modes ----
-const blocks = [ // slash menu for people new to markdown
-  ['Heading 1', '# '], ['Heading 2', '## '], ['Heading 3', '### '],
-  ['Bullet list', '- '], ['Numbered list', '1. '], ['Checklist', '- [ ] '], ['Quote', '> '],
-  ['Callout (note)', '> [!NOTE]\n> '], ['Code block', '```js\n\n```'], ['Table', '| Column | Column |\n| --- | --- |\n|  |  |'],
-  ['Math block', '$$\na^2 + b^2 = c^2\n$$'], ['Mermaid diagram', '```mermaid\ngraph LR\n  A --> B\n```'],
-  ['Sequence diagram', '```mermaid\nsequenceDiagram\n  Alice->>Bob: Hi\n  Bob-->>Alice: Hello\n```'],
-  ['Gantt chart', '```mermaid\ngantt\n  title Plan\n  section Work\n  Task A :a1, 2026-01-01, 7d\n  Task B :after a1, 5d\n```'],
-  ['Flowchart.js', '```flowchart\nst=>start: Start\ne=>end: End\nst->e\n```'],
-  ['Footnote', 'Text[^1]\n\n[^1]: The footnote.'], ['Table of contents', '[toc]'], ['Front matter', '---\ntitle: \ntags: []\n---\n'],
-  ['Highlight', '==highlighted=='], ['Superscript', 'x^2^'], ['Subscript', 'H~2~O'],
-  ['Divider', '---'], ['Link', '[text](https://)'], ['Image', '![alt](https://)'],
-];
 // ponytail: one editor instance re-created per tab switch; per-tab undo history is lost on switch. Keep one Vditor per tab if that matters.
 function createEditor(kind){
   if (ready) editor.destroy(); else $('#editor').innerHTML = ''; // Vditor can't destroy mid-init
-  ready = false;
+  ready = false; applyCodeTheme();
   const tab = editorTab = T();
   editor = new Vditor('editor', {
     cdn: CDN, lang: 'en_US', mode: kind, value: tab.value, height: '100%', cache: {enable: false},
     theme: dark() ? 'dark' : 'classic', icon: 'material',
-    typewriterMode: opt('typewriter') === 'true',
+    typewriterMode: writing() === 'typewriter',
     outline: {enable: opt('outline') === 'true', position: 'left'},
-    placeholder: kind === 'sv' ? '' : 'Type / for blocks, : for emoji, or just start writing…',
-    toolbar: kind === 'sv' ? ['undo', 'redo'] :
-      ['headings', 'bold', 'italic', 'strike', 'link', '|', 'list', 'ordered-list', 'check', 'quote', 'code', 'inline-code', 'table', 'emoji', 'upload', '|', 'undo', 'redo', '|', 'outline', 'edit-mode'],
-    preview: {mode: 'editor', theme: theme(), hljs: hljs(), markdown: markdown(), math: {engine: 'KaTeX'}},
-    hint: {emojiPath: CDN + '/dist/images/emoji', extend: [{key: '/', hint: q => blocks
-      .filter(([t]) => t.toLowerCase().includes(q.toLowerCase()))
-      .map(([t, v]) => ({html: t, value: v}))}]},
-    upload: {accept: 'image/*', multiple: true, handler: saveAssets},
+    placeholder: kind === 'sv' ? '' : 'Type / for blocks, or just start writing…',
+    toolbar: toolbar(),
+    preview: {mode: 'editor', theme: theme(), hljs: {...hlOpts(), langs: codeLangs()}, markdown: markdown(), math: {engine: 'KaTeX'}},
+    hint: {emoji: {}}, // no ":" emoji picker; "/" is the Quick Insert palette below
+    upload: {multiple: true, handler: saveAssets},
     input: v => changed(v, tab),
     after: () => { ready = true; editor.focus(); },
   });
+}
+// the code block language picker: common languages first, then the rest highlight.js knows (once it has loaded); no diagram types
+const COMMON_LANGS = ['javascript', 'typescript', 'python', 'bash', 'json', 'html', 'css', 'sql', 'java', 'c', 'cpp', 'csharp', 'go', 'rust',
+  'swift', 'kotlin', 'php', 'ruby', 'yaml', 'markdown', 'shell', 'diff', 'dockerfile', 'xml', 'scss', 'toml', 'powershell', 'objectivec',
+  'dart', 'r', 'lua', 'perl', 'scala', 'haskell', 'elixir', 'graphql', 'makefile', 'ini', 'plaintext'];
+const codeLangs = () => [...COMMON_LANGS, ...(window.hljs?.listLanguages?.().sort().filter(l => !COMMON_LANGS.includes(l)) ?? [])];
+// ---- formatting row: every format the app renders, grouped: text · inline · lists · blocks · insert · history · view.
+// Vditor's own buttons keep their behaviour and get our icons; the ones Vditor lacks wrap text or insert a block.
+function toolbar(){
+  const own = (name, ic) => ({name, icon: icon(ic), tipPosition: 's'});
+  const wrap = (name, tip, ic, pre, suf, ph) => ({name, tip, tipPosition: 's', icon: icon(ic), click: () => wrapInline(pre, suf, ph)});
+  const put = (name, tip, ic, label) => ({name, tip, tipPosition: 's', icon: icon(ic), click: () => insertBlockHere(label)});
+  return [
+    own('headings', ICON.heading), '|',
+    own('bold', ICON.bold), own('italic', ICON.italic), own('strike', ICON.strike), wrap('mark', 'Highlight', ICON.marker, '==', '==', 'highlight'),
+    own('inline-code', ICON.code), own('link', ICON.link), '|',
+    own('list', ICON.ul), own('ordered-list', ICON.ol), own('check', ICON.checks), '|',
+    own('quote', ICON.quote), own('code', ICON.codeblock), own('table', ICON.table),
+    {...own('upload', ICON.clip), tip: 'Attach image or file'}, insertTool(), '|',
+    own('undo', ICON.undo), own('redo', ICON.redo), '|', own('outline', ICON.outline), writingTool()];
+}
+// the less frequent formats live in one Insert menu, so the formatting row stays a single line
+function insertTool(){
+  const wrap = (label, ic, pre, suf, ph) => [label, () => wrapInline(pre, suf, ph), {icon: ic}];
+  const put = (label, ic, name = label) => [label, () => insertBlockHere(name), {icon: ic}];
+  return {name: 'insert', tip: 'Insert', icon: `${icon(ICON.plus)}${icon(ICON.down)}`, click(){
+    const r = document.querySelector('.vditor-toolbar [data-type=insert]').getBoundingClientRect();
+    showMenu(r.left, r.bottom + 4, ['Inline', wrap('Superscript', ICON.sup, '^', '^', '2'), wrap('Subscript', ICON.sub, '~', '~', '2'),
+      wrap('Inline math', ICON.sigma, '$', '$', 'x^2'), '-', 'Blocks', put('Callout', ICON.info), put('Math block', ICON.mathbox),
+      put('Diagram', ICON.diagram, 'Flowchart'), put('Divider', ICON.divider), put('Footnote', ICON.asterisk), put('Table of contents', ICON.toc)]);
+  }};
+}
+// wrap the selection (or a placeholder) in inline markers, e.g. ==text==; the caret lands before the closing marker
+function wrapInline(pre, suf, ph){
+  const t = editor.getSelection() || ph;
+  if (editor.getCurrentMode() === 'sv') return editor.insertValue(pre + t + suf);
+  editor.deleteValue();
+  editor.insertValue(esc(pre + t) + '<wbr>' + esc(suf)); // Vditor re-renders the block and puts the caret at <wbr>
+}
+// a Quick Insert block, below the caret's block (or in place of it when that's an empty line)
+function insertBlockHere(label){
+  const it = INSERT.flatMap(([, items]) => items).find(i => i[0] === label);
+  if (editor.getCurrentMode() === 'sv') return editor.insertValue('\n\n' + it[3] + '\n\n');
+  const el = activeBlock() || editor.vditor.ir.element.lastElementChild;
+  if (!el) return editor.insertValue(esc(it[3]));
+  putBlock(el, it, el.tagName === 'P' && !el.textContent.trim());
+}
+// writing mode: one at a time, picked from the dropdown at the end of the formatting row
+const WRITING = [['', 'Standard mode', ICON.para], ['source', 'Source mode', ICON.code, '⌘3'], ['typewriter', 'Typewriter mode', ICON.typewriter], ['focus', 'Focus mode', ICON.focus]];
+let writingMode = opt('writing');
+const writing = () => writingMode;
+function setWriting(k){
+  writingMode = k; store.set('set-writing', k);
+  document.body.classList.toggle('focus', k === 'focus');
+  setMode(mode); // source and typewriter are editor options: rebuild
+}
+document.body.classList.toggle('focus', writingMode === 'focus');
+function writingTool(){
+  const [, name, ic] = WRITING.find(w => w[0] === writing()) || WRITING[0];
+  return {name: 'wm', tip: 'Writing mode', icon: `${icon(ic)}<span>${name}</span>${icon(ICON.down)}`, click(){
+    const r = document.querySelector('.vditor-toolbar [data-type=wm]').getBoundingClientRect();
+    showMenu(r.left, r.bottom + 4, WRITING.map(([k, name, ic, key]) => [name, () => setWriting(k), {icon: ic, key, check: k === writing()}]));
+  }};
 }
 // the editor's text back into its tab (the editor only holds the live copy)
 function commit(){ if (editorTab && ready) editorTab.value = editor.getValue(); }
@@ -213,26 +548,221 @@ function changed(v, t = T()){
   scheduleAutosave(t);
 }
 
-// ---- Focus mode ----
-document.addEventListener('selectionchange', () => {
-  if (!document.body.classList.contains('focus')) return;
+// ---- the block holding the caret: focus mode dims the others, the block button sits in its margin ----
+function activeBlock(){
   const root = ready && editor.vditor[editor.getCurrentMode()]?.element; // the visible pane (Vditor keeps hidden ones)
   let n = getSelection().anchorNode;
   while (n && n.parentNode !== root) n = n.parentNode;
-  if (n?.classList?.contains('md-active')) return;
-  root?.querySelectorAll(':scope > .md-active').forEach(e => e.classList.remove('md-active'));
-  n?.classList?.add('md-active');
+  return n?.nodeType === 1 ? n : null;
+}
+let block = null; // the block the button belongs to (stays put while you use its menu)
+document.addEventListener('selectionchange', () => {
+  const n = activeBlock();
+  if (slash && n !== slash.el) closeSlash();
+  if (!n) return;
+  if (document.body.classList.contains('focus') && !n.classList.contains('md-active')) {
+    n.parentNode.querySelectorAll(':scope > .md-active').forEach(e => e.classList.remove('md-active'));
+    n.classList.add('md-active');
+  }
+  block = editor.getCurrentMode() === 'ir' ? n : null;
+  placeBlockBtn();
 });
 
+// ---- block menu (Edit mode): Duplicate / Turn Into / New Paragraph / Delete, and drag to reorder ----
+const TEXTY = /^(P|H[1-6]|UL|OL|BLOCKQUOTE)$/; // blocks Turn Into can rewrite
+function blockKind(el){
+  const t = el.tagName, d = el.dataset.type;
+  if (/^H\d$/.test(t)) return t;
+  return t === 'UL' ? (el.querySelector('.vditor-task') ? ICON.task : ICON.ul) : t === 'OL' ? ICON.ol : t === 'BLOCKQUOTE' ? ICON.quote
+    : t === 'TABLE' ? ICON.table : t === 'HR' ? ICON.divider : d === 'code-block' || d === 'html-block' ? ICON.code : d === 'math-block' ? '∑' : ICON.para;
+}
+function placeBlockBtn(){
+  const b = $('#blockBtn');
+  if (!block?.isConnected || mode !== 'edit') return b.hidden = true;
+  const r = block.getBoundingClientRect(), box = block.parentNode.getBoundingClientRect();
+  const lh = parseFloat(getComputedStyle(block).lineHeight) || 24;
+  const k = blockKind(block); // an svg path, or text like H2
+  if (b.dataset.k !== k) { b.dataset.k = k; b.innerHTML = k.startsWith('<') ? icon(k) : esc(k); }
+  b.style.left = Math.max(box.left + 2, r.left - 34) + 'px';
+  b.style.top = r.top + Math.min(lh, r.height) / 2 - 11 + 'px';
+  b.hidden = r.bottom < box.top || r.top > box.bottom; // scrolled out of view
+}
+document.addEventListener('mousemove', e => {
+  if (mode !== 'edit' || !ready || dragBlock || $('#ctx').style.display === 'block') return;
+  const root = editor.vditor.ir.element; let n = e.target;
+  while (n && n.parentNode !== root) n = n.parentNode;
+  if (n?.nodeType === 1 && n !== block) { block = n; placeBlockBtn(); }
+});
+addEventListener('scroll', placeBlockBtn, true);
+addEventListener('resize', placeBlockBtn);
+
+// Re-render the editor from markdown and put the caret back in block #i. Goes through the markdown so
+// Vditor's DOM stays canonical, and through setValue so ⌘Z undoes it.
+function rerender(v, i){
+  editor.setValue(v); changed(v, editorTab);
+  const kids = editor.vditor.ir.element.children, el = kids[Math.max(0, Math.min(i, kids.length - 1))];
+  if (!el) return;
+  if (TEXTY.test(el.tagName)) {
+    editor.focus();
+    const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    getSelection().removeAllRanges(); getSelection().addRange(r);
+  }
+  block = el; placeBlockBtn();
+}
+const TOKEN = 'MDVIEWBLOCKTOKEN';
+// replace block el with markdown md ('' deletes it); the rest of the document is re-read untouched
+function rewriteBlock(el, fn, focus){
+  const i = [...el.parentNode.children].indexOf(el), lute = editor.vditor.lute;
+  const md = fn(lute.VditorIRDOM2Md(el.outerHTML).trim());
+  const p = document.createElement('p'); p.dataset.block = '0'; p.textContent = TOKEN;
+  el.replaceWith(p);
+  const v = editor.getValue();
+  rerender(md ? v.replace(TOKEN, () => md) : v.replace(/\n*MDVIEWBLOCKTOKEN\n*/, '\n\n').replace(/^\n+/, ''), i + focus);
+}
+const TURN = [['Paragraph', '', ICON.para, '⌥⌘0'], ...[1, 2, 3, 4, 5, 6].map(n => ['Heading ' + n, '#'.repeat(n) + ' ', 'H' + n, '⌥⌘' + n]),
+  ['Quote', '> ', ICON.quote, '⌥⌘Q'], ['Ordered List', '1. ', ICON.ol, '⌥⇧⌘O'], ['Bullet List', '- ', ICON.ul, '⌥⇧⌘U'], ['Task List', '- [ ] ', ICON.task, '⌥⇧⌘X']];
+// strip one level of heading / quote / list syntax from every line, then apply the new one
+function turnInto(md, prefix){
+  const lines = md.split('\n').map(l => l.replace(/^(#{1,6}\s+|>\s?|\s*([-*+]|\d+[.)])\s+(\[[ xX]\]\s+)?)/, ''));
+  if (prefix.startsWith('#')) return prefix + lines.join(' ').replace(/\s+/g, ' ').trim(); // headings are one line
+  return prefix ? lines.filter(l => l.trim()).map(l => prefix + l).join('\n') : lines.join('\n');
+}
+function newParagraph(el){ // an empty paragraph has no markdown yet, so it's added to the DOM; typing makes it real
+  const p = document.createElement('p'); p.dataset.block = '0'; p.innerHTML = '<br>';
+  el.after(p); editor.focus(); // the menu took focus
+  const r = document.createRange(); r.setStart(p, 0); r.collapse(true);
+  getSelection().removeAllRanges(); getSelection().addRange(r);
+}
+// [label, action(block), {icon, key, ...}]: the menu shows them, the shortcuts run them on the caret's block
+const TURN_ACTIONS = TURN.map(([label, prefix, ic, key]) => [label, el => rewriteBlock(el, md => turnInto(md, prefix), 0), {icon: ic, key, texty: true}]);
+const DUPLICATE = ['Duplicate', el => rewriteBlock(el, md => md + '\n\n' + md, 1), {icon: ICON.copy, key: '⇧⌘P'}];
+const NEW_PARA = ['New Paragraph', newParagraph, {icon: ICON.para, key: '⇧⌘N'}];
+const DELETE = ['Delete', el => rewriteBlock(el, () => '', 0), {icon: ICON.trash, key: '⇧⌘D', danger: true}];
+const BLOCK_KEYS = Object.fromEntries([DUPLICATE, NEW_PARA, DELETE, ...TURN_ACTIONS].map(([, f, o]) => [o.key, [f, o.texty]]));
+function blockMenu(focus){
+  const el = block, btn = $('#blockBtn'), r = btn.getBoundingClientRect(), bind = ([l, f, o]) => [l, () => f(el), o];
+  showMenu(r.left, r.bottom + 4, [bind(DUPLICATE),
+    TEXTY.test(el.tagName) && ['Turn Into', null, {icon: ICON.turn, sub: TURN_ACTIONS.map(bind)}],
+    bind(NEW_PARA), bind(DELETE)], {focus});
+  btn.setAttribute('aria-expanded', 'true');
+}
+$('#blockBtn').addEventListener('mousedown', e => e.stopPropagation()); // don't let the page close the menu it's opening
+$('#blockBtn').onclick = e => block?.isConnected && blockMenu(e.detail === 0);
+// drag the button to move its block; a line shows where it will land
+let dragBlock = null, dropBefore = null;
+$('#blockBtn').addEventListener('dragstart', e => {
+  if (!block?.isConnected) return e.preventDefault();
+  dragBlock = block; hideMenu();
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('application/x-mdview-block', '');
+  e.dataTransfer.setDragImage(block, 0, 0);
+  setTimeout(() => dragBlock?.classList.add('dragging'));
+});
+addEventListener('dragover', e => {
+  if (!dragBlock) return;
+  e.preventDefault(); e.stopPropagation();
+  const root = dragBlock.parentNode, kids = [...root.children], line = $('#dropLine');
+  dropBefore = kids.find(k => { const r = k.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; }) ?? null;
+  const box = root.getBoundingClientRect(), col = kids[0].getBoundingClientRect();
+  const y = dropBefore ? dropBefore.getBoundingClientRect().top - 4 : kids.at(-1).getBoundingClientRect().bottom + 4;
+  Object.assign(line.style, {left: col.left + 'px', width: col.width + 'px', top: Math.max(box.top, y - 1) + 'px'});
+  line.hidden = false;
+}, true);
+addEventListener('drop', e => {
+  if (!dragBlock) return;
+  e.preventDefault(); e.stopPropagation(); // keep Vditor from pasting the drag as text
+  const el = dragBlock, root = el.parentNode;
+  if (dropBefore !== el && dropBefore !== el.nextElementSibling) {
+    root.insertBefore(el, dropBefore);
+    el.classList.remove('dragging');
+    rerender(editor.getValue(), [...root.children].indexOf(el));
+  }
+}, true);
+$('#blockBtn').addEventListener('dragend', () => {
+  dragBlock?.classList.remove('dragging'); dragBlock = dropBefore = null; $('#dropLine').hidden = true;
+});
+
+// ---- Quick Insert: "/" on an empty line opens a palette of blocks in six groups; type to filter ----
+const INSERT = [
+  ['Basic blocks', [['Text', 'Plain paragraph', ICON.para, ''], ['Heading 1', 'Big section heading', 'H1', '# '],
+    ['Heading 2', 'Medium section heading', 'H2', '## '], ['Heading 3', 'Small section heading', 'H3', '### '],
+    ['Quote', 'Capture a quote', ICON.quote, '> '], ['Callout', 'Make a note stand out', ICON.info, '> [!NOTE]\n> '],
+    ['Divider', 'Separate sections', ICON.divider, '---']]],
+  ['Lists', [['Bulleted list', 'Simple bulleted list', ICON.ul, '- '], ['Numbered list', 'List with numbering', ICON.ol, '1. '],
+    ['To-do list', 'Track tasks with checkboxes', ICON.task, '- [ ] ']]],
+  ['Media', [['Image', 'Embed an image by URL', ICON.image, '![alt](https://)'], ['Link', 'Link to a page', ICON.link, '[text](https://)'],
+    ['Table', 'Rows and columns', ICON.table, '| Column | Column |\n| --- | --- |\n|  |  |']]],
+  ['Code & math', [['Code block', 'Code with syntax highlighting', ICON.code, '```js\n\n```'],
+    ['Math block', 'LaTeX equation', '∑', '$$\na^2 + b^2 = c^2\n$$'], ['Inline math', 'Formula inside text', 'x²', '$E = mc^2$']]],
+  ['Diagrams', [['Flowchart', 'Mermaid flow diagram', ICON.diagram, '```mermaid\ngraph LR\n  A --> B\n```'],
+    ['Sequence diagram', 'Messages between actors', ICON.diagram, '```mermaid\nsequenceDiagram\n  Alice->>Bob: Hi\n  Bob-->>Alice: Hello\n```'],
+    ['Gantt chart', 'Project timeline', ICON.diagram, '```mermaid\ngantt\n  title Plan\n  section Work\n  Task A :a1, 2026-01-01, 7d\n  Task B :after a1, 5d\n```'],
+    ['Mind map', 'Outline as a map', ICON.diagram, '```markmap\n# Topic\n## Idea\n## Idea\n```'],
+    ['Flowchart.js', 'Classic flowchart', ICON.diagram, '```flowchart\nst=>start: Start\ne=>end: End\nst->e\n```']]],
+  ['Advanced', [['Table of contents', 'Headings of this page', ICON.toc, '[toc]'], ['Footnote', 'Reference at the bottom', '¹', 'Text[^1]\n\n[^1]: The footnote.'],
+    ['Front matter', 'YAML metadata', '---', '---\ntitle: \ntags: []\n---\n'], ['Highlight', 'Marked text', 'H', '==highlighted=='],
+    ['Superscript', 'Raised text', 'x²', 'x^2^'], ['Subscript', 'Lowered text', 'x₂', 'H~2~O']]],
+];
+let slash = null; // open palette: {el, q, list, i}
+document.addEventListener('input', () => {
+  if (mode !== 'edit' || !ready) return;
+  const el = activeBlock(), m = el?.tagName === 'P' && el.textContent.match(/^\/(?!\s)([^\/\n]{0,30})$/);
+  m ? openSlash(el, m[1]) : closeSlash();
+});
+function openSlash(el, q){
+  const box = $('#slash'), words = q.toLowerCase();
+  const groups = INSERT.map(([g, items]) => [g, items.filter(([l, d]) => `${l} ${d} ${g}`.toLowerCase().includes(words))]).filter(([, it]) => it.length);
+  slash = {el, q, list: groups.flatMap(([, it]) => it), i: 0};
+  let n = 0;
+  box.innerHTML = groups.map(([g, it]) => `<div class="mh">${g}</div>` + it.map(([l, d, ic]) =>
+    `<button role="option" data-n="${n++}"><span class="mi">${ic.startsWith('<') ? icon(ic) : esc(ic)}</span><span class="ml">${esc(l)}<small>${esc(d)}</small></span></button>`).join('')).join('')
+    || '<div class="none">No results</div>';
+  box.style.display = 'block';
+  const r = el.getBoundingClientRect(), h = box.offsetHeight;
+  box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + 'px';
+  box.style.top = (r.bottom + 4 + h > innerHeight - 8 ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px'; // flip above near the bottom
+  markSlash();
+}
+function markSlash(scroll = true){
+  $('#slash').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.n === slash.i));
+  if (scroll) $('#slash .sel')?.scrollIntoView({block: 'nearest'});
+}
+function closeSlash(){ slash = null; $('#slash').style.display = 'none'; }
+function pickSlash(){
+  const it = slash?.list[slash.i], el = slash?.el; closeSlash();
+  if (!it || !el?.isConnected) return;
+  if (it[3]) return putBlock(el, it, true);
+  el.innerHTML = '<br>'; // Text: just clear the "/query"
+  const r = document.createRange(); r.setStart(el, 0);
+  getSelection().removeAllRanges(); getSelection().addRange(r);
+}
+// put block `md` in place of el (replace) or after it, then put the caret where typing continues
+function putBlock(el, [label, , , md], replace){
+  // "## " alone is an empty heading with nowhere to type, so it gets its name as a selected placeholder
+  const ph = md.endsWith(' ') ? label : '', r = document.createRange();
+  rewriteBlock(el, cur => replace ? md + ph : cur + '\n\n' + md + ph, replace ? 0 : 1);
+  let n = null;
+  if (ph) { const w = document.createTreeWalker(block, NodeFilter.SHOW_TEXT); while ((n = w.nextNode()) && (!n.data.includes(ph) || n.parentElement.closest('.vditor-ir__marker'))); }
+  else n = block.querySelector('pre.vditor-ir__marker--pre code'); // code, math, diagrams: caret inside
+  if (!n) return;
+  if (ph) { const i = n.data.indexOf(ph); r.setStart(n, i); r.setEnd(n, i + ph.length); } else { r.selectNodeContents(n); r.collapse(true); }
+  editor.focus();
+  getSelection().removeAllRanges(); getSelection().addRange(r);
+}
+$('#slash').addEventListener('mousedown', e => e.preventDefault()); // keep the caret in the editor
+$('#slash').addEventListener('mousemove', e => { const b = e.target.closest('button'); if (b && slash && +b.dataset.n !== slash.i) { slash.i = +b.dataset.n; markSlash(false); } });
+$('#slash').addEventListener('click', e => { if (e.target.closest('button')) pickSlash(); });
+
 // ---- Assets: pasted / dropped / uploaded images go next to the document ----
+// ---- Attachments: pasted / dropped / attached files are copied next to the document; images embed, other files link ----
 async function saveAssets(files){
-  if (!native) return 'Image saving works in the MDView app.';
+  if (!native) return 'Attachments work in the MDView app.';
   const lines = [];
   for (const f of files) {
     const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(f); });
     const res = await native.postMessage({cmd: 'asset', doc: T().path, name: f.name || 'image.png', data, folder: opt('assets') || 'assets'});
     if (res.error) return res.error;
-    lines.push(`![${f.name.replace(/\.\w+$/, '')}](${res.path})`);
+    const label = esc((f.name || 'image').replace(/\.\w+$/, '').replace(/[\[\]]/g, ''));
+    lines.push(f.type.startsWith('image/') ? `![${label}](${res.path})` : `[${esc(f.name)}](${res.path})`);
   }
   editor.insertValue(lines.join('\n'));
   return null;
@@ -241,18 +771,24 @@ async function saveAssets(files){
 // ---- modes ----
 async function setMode(m){
   if (QL) m = 'read';
+  else if (m !== 'read') m = writing() === 'source' ? 'source' : 'edit';
   commit();
-  mode = m;
+  mode = m; block = null; placeBlockBtn(); closeSlash();
   for (const c of ['read', 'edit', 'source']) document.body.classList.toggle(c, c === m);
   document.body.classList.toggle('ql', QL);
-  $('#mRead').classList.toggle('on', m === 'read');
-  $('#mEdit').classList.toggle('on', m === 'edit');
-  $('#mSource').classList.toggle('on', m === 'source');
+  for (const [id, on] of [['#mRead', m === 'read'], ['#mEdit', m !== 'read']]) {
+    $(id).classList.toggle('on', on); $(id).setAttribute('aria-pressed', on);
+  }
   if (m === 'read') { editorTab = null; await renderView(); } else createEditor(m === 'edit' ? 'ir' : 'sv');
 }
 $('#mRead').onclick = () => setMode('read');
 $('#mEdit').onclick = () => setMode('edit');
-$('#mSource').onclick = () => setMode('source');
+// ⌘3: from View, write in source; while writing, flip source on/off
+function toggleSource(){
+  const to = mode === 'read' || writing() !== 'source' ? 'source' : '';
+  if (mode === 'read') mode = 'edit';
+  setWriting(to);
+}
 
 // ---- tabs ----
 function newTab(o = {}){
@@ -319,7 +855,7 @@ function renameTab(t){
         } else t.name = name;    // not saved yet: just the name it will be saved as
       }
     }
-    syncChrome(); refreshTreeIfOpen();
+    syncChrome();
   };
   input.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); };
   input.onblur = () => finish(true);
@@ -327,18 +863,18 @@ function renameTab(t){
 function renderTabs(){
   $('#tabs').innerHTML = tabs.map((t, i) =>
     `<div class="tab${i === active ? ' cur' : ''}${t.dirty ? ' dirty' : ''}" draggable="true" data-i="${i}" title="${esc(t.path || t.name)}" role="tab" aria-selected="${i === active}">` +
-    `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">×</button></div>`).join('') +
-    `<button id="newTab" title="New tab (⌘T)" aria-label="New tab">+</button>`;
+    `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">${icon(ICON.x)}</button></div>`).join('') +
+    `<button id="newTab" class="icon" title="New tab (⌘T)" aria-label="New tab">${icon(ICON.plus)}</button>`;
   $('#tabs .cur')?.scrollIntoView({block: 'nearest', inline: 'nearest'});
 }
 // title bar, dirty dot, session restore: the host keeps what it needs from this one message
 function syncChrome(){
-  renderTabs(); stats(); markTree();
+  renderTabs(); renderSide(); stats(); saveState();
   if (native && !QL) native.postMessage({cmd: 'state', title: T().name, path: T().path, dirty: tabs.some(t => t.dirty), paths: tabs.map(t => t.path).filter(Boolean)});
 }
 const tabsEl = $('#tabs');
 tabsEl.addEventListener('click', e => {
-  if (e.target.id === 'newTab') return newTab();
+  if (e.target.closest('#newTab')) return newTab();
   const x = e.target.closest('[data-close]'); if (x) return closeTab(+x.dataset.close);
   const el = e.target.closest('.tab');
   if (el && +el.dataset.i !== active && !e.target.closest('input')) switchTo(+el.dataset.i);
@@ -356,6 +892,7 @@ tabsEl.addEventListener('contextmenu', e => {
   showMenu(e.clientX, e.clientY, [
     ['Rename…', () => renameTab(t)],
     native && ['Move to New Window', () => moveToWindow(t)],
+    '-',
     ['Close', () => closeTab(tabs.indexOf(t))],
     ['Close Others', async () => { for (const o of tabs.filter(o => o !== t)) if (!(await closeTab(tabs.indexOf(o)))) break; }],
   ]);
@@ -381,16 +918,55 @@ tabsEl.addEventListener('dragend', e => {
   if (dragFrom >= 0 && native && outside && e.dataTransfer.dropEffect === 'none') moveToWindow(tabs[dragFrom]);
   dragFrom = -1;
 });
-function showMenu(x, y, items){
-  const m = $('#ctx'); m.innerHTML = '';
+
+// ---- menus: items are [label, action, {icon, key, danger, sub}], '-' for a separator, or a plain string for a section heading ----
+function fillMenu(m, items){
+  m.innerHTML = '';
   for (const it of items.filter(Boolean)) {
-    const b = document.createElement('button'); b.textContent = it[0]; b.setAttribute('role', 'menuitem');
-    b.onclick = () => { m.style.display = 'none'; it[1](); };
+    if (typeof it === 'string') {
+      const el = document.createElement(it === '-' ? 'hr' : 'div');
+      if (it !== '-') { el.className = 'mh'; el.textContent = it; }
+      m.append(el); continue;
+    }
+    const [label, action, o = {}] = it, b = document.createElement('button');
+    b.setAttribute('role', 'menuitem'); if (o.danger) b.className = 'danger';
+    b.innerHTML = (o.icon ? `<span class="mi">${o.icon.startsWith('<') ? icon(o.icon) : esc(o.icon)}</span>` : '') +
+      `<span class="ml">${esc(label)}</span>` + (o.key ? `<kbd>${o.key}</kbd>` : '') + (o.sub ? `<span class="mc">${icon(ICON.chev)}</span>` : '') +
+      (o.check ? `<span class="mc">${icon(ICON.check).replace('class="i"', 'class="i ck"')}</span>` : '');
+    if (o.sub) { b.setAttribute('aria-haspopup', 'menu'); b.onclick = b.onmouseenter = () => openSub(b, o.sub); }
+    else {
+      b.onclick = () => { hideMenu(); action(); };
+      if (m.id === 'ctx') b.onmouseenter = closeSub;
+    }
     m.append(b);
   }
-  Object.assign(m.style, {display: 'block', left: Math.min(x, innerWidth - 200) + 'px', top: Math.min(y, innerHeight - m.offsetHeight - 8) + 'px'});
 }
-addEventListener('mousedown', e => { if (!e.target.closest('#ctx')) $('#ctx').style.display = 'none'; });
+function place(m, x, y, right){
+  m.style.display = 'block';
+  const w = m.offsetWidth, h = m.offsetHeight;
+  Object.assign(m.style, {left: Math.max(8, Math.min(right ? x - w : x, innerWidth - w - 8)) + 'px', top: Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px'});
+}
+function showMenu(x, y, items, {right = false, focus = false} = {}){
+  const m = $('#ctx'); closeSub(); fillMenu(m, items); place(m, x, y, right);
+  if (focus) m.querySelector('button')?.focus();
+}
+function openSub(b, items){
+  if (b.classList.contains('open')) return;
+  closeSub(); b.classList.add('open');
+  const m = $('#sub'), r = b.getBoundingClientRect();
+  fillMenu(m, items); place(m, r.right + 4, r.top - 5);
+  if (m.offsetLeft < r.right) place(m, r.left - 4, r.top - 5, true); // no room on the right: open to the left
+}
+function closeSub(){ $('#sub').style.display = 'none'; $('#ctx .open')?.classList.remove('open'); }
+function hideMenu(){ closeSub(); $('#ctx').style.display = 'none'; $('#export').setAttribute('aria-expanded', 'false'); $('#blockBtn').setAttribute('aria-expanded', 'false'); }
+for (const m of [$('#ctx'), $('#sub')]) m.addEventListener('mousedown', e => e.preventDefault()); // keep the editor's caret and selection
+for (const m of [$('#ctx'), $('#sub')]) m.addEventListener('keydown', e => {
+  const bs = [...m.querySelectorAll('button')], cur = document.activeElement, i = bs.indexOf(cur);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus(); }
+  else if (e.key === 'ArrowRight' && cur?.getAttribute('aria-haspopup')) { cur.click(); $('#sub button')?.focus(); }
+  else if (e.key === 'ArrowLeft' && m.id === 'sub') { const p = $('#ctx .open'); closeSub(); p?.focus(); }
+});
+addEventListener('mousedown', e => { if (!e.target.closest('.menu, #export')) hideMenu(); if (!e.target.closest('#slash')) closeSlash(); });
 
 // in-page dialog (same look on every platform); resolves to the clicked button's index, Esc = last button
 function ask(title, msg, buttons){
@@ -404,13 +980,25 @@ function ask(title, msg, buttons){
   });
 }
 
-// ---- word counter ----
+// ---- status bar: save state on the left, word counter on the right ----
 function stats(){
   const v = T().value, t = v.replace(/```[\s\S]*?```/g, ' ');
   const words = (t.match(/[\p{L}\p{N}'’-]+/gu) || []).length;
   const paras = v.split(/\n\s*\n/).filter(s => s.trim()).length;
   $('#stats').textContent = `${words.toLocaleString()} words · ${v.length.toLocaleString()} characters · ${paras} paragraphs`;
 }
+function saveState(){
+  const t = T(), el = $('#saveState');
+  el.classList.toggle('dirty', t.dirty); el.title = 'Save (⌘S)';
+  $('#path').textContent = t.path;
+  $('#save').classList.toggle('dirty', t.dirty);
+}
+$('#saveState').onclick = () => T().dirty && save();
+$('#path').onclick = e => { // click copies; drag still selects part of it
+  if (!T().path || !getSelection().isCollapsed) return;
+  copy({text: T().path});
+  e.target.classList.add('copied'); setTimeout(() => e.target.classList.remove('copied'), 1200);
+};
 
 // ---- open / save ----
 $('#open').onclick = async () => {
@@ -432,7 +1020,7 @@ async function saveTab(t = T()){
     if (r.path) { Object.assign(t, r); if (t === T()) setMode(mode); } // Save As: new path, re-resolve images
   } else if (t.handle?.createWritable) { const w = await t.handle.createWritable(); await w.write(t.value); await w.close(); }
   else download(t.name, t.value, 'text/markdown');
-  t.dirty = false; syncChrome(); refreshTreeIfOpen();
+  t.dirty = false; syncChrome();
   return true;
 }
 const save = () => saveTab();
@@ -457,35 +1045,42 @@ addEventListener('drop', async e => {
   for (const f of docs) load(f.name, await f.text()); // each dropped file opens in its own tab
 }, true);
 
-// ---- files sidebar (folder of the current document, or one picked with Open Folder) ----
-async function refreshTree(){
-  const el = $('#tree');
-  if (!native) { el.innerHTML = '<p class="hint">The files sidebar works in the MDView app.</p>'; return; }
-  const t = await native.postMessage({cmd: 'tree', doc: T().path});
-  const node = n => n.children
-    ? `<details ${n.open ? 'open' : ''}><summary>📁 ${esc(n.name)}</summary>${n.children.map(node).join('')}</details>`
-    : `<a data-path="${esc(n.path)}" title="${esc(n.path)}">${esc(n.name)}</a>`;
-  el.innerHTML = `<div class="row" style="padding:0 4px 8px"><button id="openFolder">Open folder…</button></div>` +
-    (t ? node({...t, open: true}) : '<p class="hint">Open a file or folder to browse it here.</p>');
-  $('#openFolder').onclick = async () => { await native.postMessage({cmd: 'openFolder'}); refreshTree(); };
-  markTree();
+// ---- sidebar: this window's open documents ----
+function renderSide(){
+  $('#tree').innerHTML = tabs.map((t, i) =>
+    `<a data-i="${i}" class="${i === active ? 'cur' : ''}${t.dirty ? ' dirty' : ''}" title="${esc(t.path || t.name)}">${icon(ICON.file)}<span>${esc(t.name)}</span></a>`).join('');
 }
-const refreshTreeIfOpen = () => document.body.classList.contains('tree') && refreshTree();
-function markTree(){ document.querySelectorAll('#tree a').forEach(a => a.classList.toggle('cur', a.dataset.path === T()?.path)); }
-$('#tree').addEventListener('click', e => {
-  const a = e.target.closest('a[data-path]');
-  if (a) native.postMessage({cmd: 'openPath', path: a.dataset.path}); // opens in a new tab, or switches to it
-});
-function toggleTree(){ const on = document.body.classList.toggle('tree'); store.set('tree', on); if (on) refreshTree(); }
+$('#tree').addEventListener('click', e => { const a = e.target.closest('a[data-i]'); if (a) switchTo(+a.dataset.i); });
+function toggleTree(){
+  const on = document.body.classList.toggle('tree');
+  store.set('tree', on); $('#tTree').setAttribute('aria-expanded', on);
+}
 $('#tTree').onclick = toggleTree;
+
+// ---- panels: find bar and settings ----
+function panel(id, open){
+  const el = $(id), btn = $(id === '#find' ? '#tFind' : '#gear');
+  open ??= !el.classList.contains('open');
+  el.classList.toggle('open', open); btn.setAttribute('aria-expanded', open);
+  if (open && id === '#find') { $('#fq').focus(); $('#fq').select(); countMatches(); }
+}
+$('#tFind').onclick = () => panel('#find');
+$('#fclose').onclick = () => panel('#find', false);
+$('#gear').onclick = () => panel('#settings');
+$('#closeSettings').onclick = () => panel('#settings', false);
 
 // ---- find & replace (current document) ----
 function pattern(){
   const q = $('#fq').value; if (!q) return null;
   try { return new RegExp($('#fre').checked ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#fcase').checked ? 'g' : 'gi'); }
-  catch { $('#fcount').textContent = 'Invalid regular expression'; return null; }
+  catch { $('#fcount').textContent = 'Invalid regex'; return null; }
 }
-function countMatches(){ const p = pattern(); $('#fcount').textContent = p ? `${(current().match(p) || []).length} matches in this document` : ''; }
+function countMatches(){
+  $('#fcount').textContent = '';
+  const p = pattern(); if (!p) return;
+  const n = (current().match(p) || []).length;
+  $('#fcount').textContent = n ? `${n} match${n === 1 ? '' : 'es'}` : 'No results';
+}
 ['fq', 'fre', 'fcase'].forEach(id => $('#' + id).addEventListener('input', countMatches));
 $('#fnext').onclick = () => { // highlights the next visible occurrence; regex patterns use the first literal match
   const p = pattern(); if (!p) return;
@@ -499,13 +1094,9 @@ $('#fall').onclick = () => {
   if (mode === 'read') renderView(); else editor.setValue(t.value);
   $('#fcount').textContent = `Replaced ${n}`;
 };
-function pop(id){ const el = $(id), open = !el.classList.contains('open'); document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); el.classList.toggle('open', open); if (open && id === '#find') $('#fq').focus(); }
-$('#tFind').onclick = () => pop('#find');
-$('#gear').onclick = () => pop('#settings');
 
 // ---- export & copy (renders the View first so diagrams/math are included) ----
-$('#export').onchange = async e => {
-  const v = e.target.value; e.target.value = '';
+async function exportAs(v){
   commit();
   const t = T(), name = t.name.replace(/\.\w+$/, '');
   if (v === 'md') return download(name + '.md', t.value, 'text/markdown');
@@ -516,11 +1107,19 @@ $('#export').onchange = async e => {
   if (v === 'html') {
     let css = '';
     for (const s of document.styleSheets) try { css += [...s.cssRules].map(r => r.cssText).join('\n'); } catch {}
-    download(name + '.html', `<!doctype html><html data-theme="${themeName()}"><meta charset="utf-8"><title>${esc(name)}</title><style>${css}</style><body style="height:auto;display:block;padding:24px 16px"><article id="doc" class="vditor-reset" style="${document.documentElement.style.cssText}">${html}</article>`, 'text/html');
+    download(name + '.html', `<!doctype html><html data-theme="${themeName()}"><meta charset="utf-8"><title>${esc(name)}</title><style>${css}</style><body style="height:auto;display:block;overflow:auto;padding:48px 16px"><article id="doc" class="vditor-reset" style="${document.documentElement.style.cssText}">${html}</article>`, 'text/html');
   }
   if (v === 'c-html') copy({text: html});
   if (v === 'c-text') copy({text: $('#doc').innerText});
   if (v === 'c-rich') copy({html, text: $('#doc').innerText});
+}
+$('#export').onclick = e => {
+  if ($('#export').getAttribute('aria-expanded') === 'true') return hideMenu();
+  const r = e.currentTarget.getBoundingClientRect(), go = v => () => exportAs(v);
+  showMenu(r.right, r.bottom + 6, ['Export', ['HTML…', go('html')], ['PDF…', go('pdf')], ['Markdown…', go('md')],
+    '-', 'Copy as', ['Markdown', go('c-md')], ['Rich text', go('c-rich')], ['HTML', go('c-html')], ['Plain text', go('c-text')]],
+    {right: true, focus: e.detail === 0}); // opened from the keyboard: focus the first item
+  $('#export').setAttribute('aria-expanded', 'true');
 };
 async function copy({html, text}){
   if (native) return native.postMessage({cmd: 'copy', html: html ?? '', text});
@@ -531,32 +1130,47 @@ async function copy({html, text}){
 
 // ---- live settings ----
 document.querySelectorAll('#settings [data-k]').forEach(el => {
-  const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox';
-  if (box) el.checked = opt(k) === 'true'; else if (opt(k) !== '') el.value = opt(k);
+  const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox', radio = el.type === 'radio';
+  const out = el.type === 'range' && el.closest('.field')?.querySelector('output');
+  if (box) el.checked = opt(k) === 'true'; else if (radio) el.checked = el.value === opt(k); else if (opt(k) !== '') el.value = opt(k);
   const apply = rerender => {
     const v = box ? String(el.checked) : el.value;
     store.set('set-' + k, v);
-    if (el.previousElementSibling?.tagName === 'SPAN') el.previousElementSibling.textContent = v + u;
+    if (out) out.textContent = v + u;
     if (k === 'theme') document.documentElement.dataset.theme = themeName();
     else if (k === 'css') $('#userCss').textContent = v;
-    else if (k === 'focus') document.body.classList.toggle('focus', el.checked);
+    else if (k === 'align') document.body.classList.toggle('left', v === 'left');
+    else if (k === 'code-colors') document.documentElement.dataset.code = v;
     else if (['font', 'size', 'lh', 'width', 'code-font', 'code-size', 'tab'].includes(k)) document.documentElement.style.setProperty('--' + k, v + u);
-    // theme, typewriter and outline are editor options: rebuild. Everything else is CSS and updates instantly.
-    if (rerender && ['theme', 'typewriter', 'outline'].includes(k)) setMode(mode);
+    // theme, code colors and outline need a re-render. Everything else is CSS and updates instantly.
+    if (rerender && ['theme', 'code-colors', 'outline'].includes(k)) setMode(mode);
   };
-  el.addEventListener(box || el.tagName === 'SELECT' ? 'change' : 'input', () => apply(true));
-  apply(false);
+  el.addEventListener(box || radio || el.tagName === 'SELECT' ? 'change' : 'input', () => apply(true));
+  if (!radio || el.checked) apply(false); // a radio group applies once, through its checked option
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!opt('theme')) { document.documentElement.dataset.theme = themeName(); setMode(mode); } });
 
 // ---- shortcuts (⌘ on macOS, Ctrl elsewhere) ----
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); $('#ctx').style.display = 'none'; }
+  if (slash && !slash.list.length && e.key !== 'Backspace') closeSlash(); // nothing matches: let keys through
+  if (slash) {
+    const d = {ArrowDown: 1, ArrowUp: -1}[e.key];
+    if (d || ['Enter', 'Tab', 'Escape'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); }
+    if (d) { slash.i = (slash.i + d + slash.list.length) % slash.list.length; return markSlash(); }
+    if (e.key === 'Enter' || e.key === 'Tab') return pickSlash();
+    if (e.key === 'Escape') return closeSlash();
+  }
+  if (e.key === 'Escape') { hideMenu(); panel('#find', false); }
   if (e.ctrlKey && e.key === 'Tab') { e.preventDefault(); return switchTo((active + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length); }
+  if (mode === 'edit' && (e.metaKey || e.ctrlKey) && (e.shiftKey || e.altKey)) {
+    const [f, texty] = BLOCK_KEYS[(e.altKey ? '⌥' : '') + (e.shiftKey ? '⇧' : '') + '⌘' + e.code.replace(/^(Key|Digit)/, '')] || [];
+    const el = f && activeBlock();
+    if (el && (!texty || TEXTY.test(el.tagName))) { e.preventDefault(); e.stopPropagation(); return f(el); }
+  }
   if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
   if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
-  const k = {s: save, o: () => $('#open').click(), f: () => pop('#find'), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active),
-    1: () => setMode('read'), 2: () => setMode('edit'), 3: () => setMode('source')}[e.key];
+  const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active),
+    ',': () => panel('#settings'), 1: () => setMode('read'), 2: () => setMode('edit'), 3: toggleSource}[e.key];
   if (k) { e.preventDefault(); k(); }
 }, true);
 $('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#fnext').click(); });
@@ -565,10 +1179,11 @@ const WELCOME = `# Welcome to MDView
 
 You're in **View mode**: select and copy freely, nothing changes.
 
-- **Edit** (⌘2) edits inline like Typora. Type \`/\` for blocks and \`:\` for emoji.
-- **Source** (⌘3) shows the raw markdown.
+- **Edit** (⌘2) edits inline like Typora. Type \`/\` on an empty line to insert any block. Paste, drop or attach images and files.
+- **Blocks**: click the badge in a block's margin (¶, H1…) to duplicate it, turn it into another kind or delete it; its menu lists the shortcuts. Drag the badge to move the block.
+- **Source** (⌘3) switches writing to raw markdown. Pick Standard, Source, Typewriter or Focus mode from the dropdown at the end of the formatting row.
 - **Tabs**: ⌘T new tab, ⌘W close, Ctrl+Tab to switch. Double-click a tab to rename the file, drag to reorder, right-click to move it to a new window.
-- ⚙ has themes, typewriter mode, focus mode, auto-save and more. Changes apply live.
+- **Settings** (⌘,) has themes, text and code styles, auto-save and more. Changes apply live.
 
 Math $E = mc^2$, ==highlight==, H~2~O, x^2^, footnotes[^1], and diagrams:
 
