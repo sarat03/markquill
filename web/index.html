@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MDView</title>
+<link rel="stylesheet" href="vditor/dist/index.css">
+<script src="vditor/dist/index.min.js"></script>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--mute:#656d76;--line:#d0d7de;--panel:#f6f8fa;--accent:#0969da;
+  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,monospace;--code-size:14px;--tab:4}
+:root[data-theme=dark]{--bg:#1d2125;--fg:#d1d5da;--mute:#8d96a0;--line:#30363d;--panel:#24292e;--accent:#4493f8}
+:root[data-theme=material]{--bg:#263238;--fg:#eeffff;--mute:#89a2ab;--line:#37474f;--panel:#2e3c43;--accent:#82aaff}
+:root[data-theme=onedark]{--bg:#282c34;--fg:#abb2bf;--mute:#7f848e;--line:#3e4451;--panel:#21252b;--accent:#61afef}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;flex-direction:column}
+header{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+header .spacer{margin-right:auto}
+button,select,input[type=text],textarea{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+button,select{cursor:pointer}
+button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.group{display:flex}.group button{border-radius:0;margin-left:-1px}.group button:first-child{border-radius:6px 0 0 6px}.group button:last-child{border-radius:0 6px 6px 0}
+/* tabs */
+#tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex:none}
+.tab{display:flex;align-items:center;gap:2px;padding:0 4px 0 12px;height:32px;font-size:13px;border-right:1px solid var(--line);cursor:default;max-width:220px;color:var(--mute);white-space:nowrap;user-select:none;flex:none}
+.tab .tn{overflow:hidden;text-overflow:ellipsis}
+.tab.cur{background:var(--bg);color:var(--fg);box-shadow:inset 0 2px 0 var(--accent)}
+.tab.over{box-shadow:inset 3px 0 0 var(--accent)}
+.tab .x{border:0;background:none;padding:0;width:20px;height:20px;border-radius:4px;visibility:hidden;color:var(--mute);font-size:15px;line-height:1}
+.tab .x:hover{background:var(--line)}
+.tab:hover .x,.tab.cur .x,.tab.dirty .x{visibility:visible}
+.tab.dirty:not(:hover) .x{font-size:0}
+.tab.dirty:not(:hover) .x::after{content:"●";font-size:10px}
+.tab input{font:inherit;width:150px;padding:1px 4px;border-radius:4px}
+#newTab{border:0;background:none;padding:0 12px;font-size:17px;color:var(--mute);border-radius:0}
+#newTab:hover{color:var(--fg)}
+.menu{display:none;position:fixed;min-width:190px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #0003;z-index:300}
+.menu button{display:block;width:100%;text-align:left;border:0;border-radius:4px;background:none;padding:6px 10px}
+.menu button:hover{background:var(--panel)}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);padding:18px 20px;width:min(380px,calc(100vw - 32px))}
+dialog::backdrop{background:#0005}
+dialog h3{margin:0 0 6px;font-size:15px}dialog p{margin:0 0 16px;font-size:13px;color:var(--mute)}
+dialog .row{display:flex;gap:8px;justify-content:flex-end}
+/* layout */
+.wrap{flex:1;min-height:0;display:flex}
+main{flex:1;min-width:0;position:relative}
+#tree{width:240px;flex:none;overflow:auto;border-right:1px solid var(--line);background:var(--panel);font-size:13px;padding:8px 4px;display:none}
+body.tree #tree{display:block}
+#tree summary,#tree a{display:block;padding:3px 8px;border-radius:4px;cursor:pointer;color:var(--fg);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tree a:hover,#tree summary:hover{background:var(--line)}#tree a.cur{background:var(--accent);color:#fff}
+#tree details details,#tree details>a{margin-left:12px}
+#tree .hint{color:var(--mute);padding:8px}
+#out{position:absolute;inset:0;overflow:auto;padding:24px 16px}
+#editor{height:100%;border:0!important}
+body.read #editor,body.edit #out,body.source #out{display:none}
+/* live settings apply to reader, inline editor and source editor */
+#doc,.vditor-reset{font-family:var(--font)!important;font-size:var(--size)!important;line-height:var(--lh)!important;color:var(--fg)}
+#doc code,#doc pre,.vditor-reset code,.vditor-reset pre,.vditor-sv{font-family:var(--code-font)!important;tab-size:var(--tab)}
+#doc pre code,.vditor-reset pre code,.vditor-sv{font-size:var(--code-size)!important}
+#doc{max-width:var(--width);margin:0 auto}
+.vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:var(--width);margin:0 auto;padding-left:24px!important;padding-right:24px!important}
+.vditor,.vditor-toolbar,.vditor-reset,.vditor-sv{background:var(--bg)!important;color:var(--fg)}
+.vditor-toolbar{border-bottom:1px solid var(--line)!important;padding-left:8px!important}
+/* focus mode: dim every block except the one holding the caret */
+body.focus .vditor-reset>*{opacity:.25;transition:opacity .15s}
+body.focus .vditor-reset>.md-active{opacity:1}
+footer{display:flex;gap:16px;justify-content:flex-end;padding:3px 12px;border-top:1px solid var(--line);background:var(--panel);color:var(--mute);font-size:12px}
+.pop{display:none;position:fixed;right:12px;top:52px;width:280px;max-height:calc(100vh - 90px);overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 8px 24px #0003;z-index:100}
+.pop.open{display:block}
+.pop label{display:block;font-size:13px;margin-bottom:10px}
+.pop input[type=range],.pop select,.pop textarea,.pop input[type=text]{width:100%;margin-top:4px}
+.pop h4{margin:14px 0 8px;font-size:12px;text-transform:uppercase;color:var(--mute)}
+.pop .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+#drop{display:none;position:fixed;inset:0;background:#0969da33;border:3px dashed var(--accent);z-index:200;pointer-events:none}
+body.ql header,body.ql footer,body.ql #tree,body.ql #tabs{display:none!important}
+@media print{header,footer,#tabs,#tree,#editor,.pop,.menu{display:none!important}#out{position:static;overflow:visible;display:block!important}}
+</style>
+<style id="userCss"></style>
+</head>
+<body class="read">
+<header>
+  <button id="tTree" title="Files sidebar (⌘\)" aria-label="Files">☰</button>
+  <span class="spacer"></span>
+  <div class="group">
+    <button id="mRead" class="on" title="Read only: select and copy without editing (⌘1)">View</button>
+    <button id="mEdit" title="Inline WYSIWYG editing (⌘2). Type / for blocks.">Edit</button>
+    <button id="mSource" title="Raw markdown (⌘3)">Source</button>
+  </div>
+  <button id="open">Open</button>
+  <button id="save">Save</button>
+  <select id="export" aria-label="Export and copy"><option value="">Export…</option>
+    <option value="html">Export HTML</option><option value="pdf">Export PDF</option><option value="md">Export Markdown</option>
+    <option value="c-md">Copy as Markdown</option><option value="c-html">Copy as HTML</option><option value="c-text">Copy as plain text</option><option value="c-rich">Copy as rich text</option></select>
+  <button id="tFind" title="Find & replace (⌘F)" aria-label="Find">⌕</button>
+  <button id="gear" aria-label="Settings">⚙</button>
+</header>
+<nav id="tabs" aria-label="Open documents"></nav>
+<div class="wrap">
+  <nav id="tree"></nav>
+  <main><div id="out"><article id="doc" class="vditor-reset"></article></div><div id="editor"></div></main>
+</div>
+<footer id="stats"></footer>
+
+<div class="menu" id="ctx" role="menu"></div>
+<dialog id="ask"><form method="dialog"><h3></h3><p></p><div class="row"></div></form></dialog>
+
+<div class="pop" id="find">
+  <label>Find<input type="text" id="fq"></label>
+  <label>Replace with<input type="text" id="fr"></label>
+  <label><input type="checkbox" id="fre"> Regular expression</label>
+  <label><input type="checkbox" id="fcase"> Match case</label>
+  <div class="row"><button id="fnext">Find next</button><button id="fall">Replace all</button></div>
+  <p id="fcount" style="font-size:12px;color:var(--mute)"></p>
+</div>
+
+<div class="pop" id="settings">
+  <h4>Appearance</h4>
+  <label>Theme<select data-k="theme"><option value="">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="material">Material Dark</option><option value="onedark">One Dark</option></select></label>
+  <label>Font<select data-k="font"><option value="-apple-system,system-ui,sans-serif">Sans</option><option value="Georgia,'Times New Roman',serif">Serif</option><option value="ui-monospace,Menlo,monospace">Mono</option></select></label>
+  <label>Font size <span></span><input type="range" min="12" max="24" data-k="size" data-u="px"></label>
+  <label>Line height <span></span><input type="range" min="1.2" max="2.2" step="0.1" data-k="lh"></label>
+  <label>Page width <span></span><input type="range" min="500" max="1400" step="20" data-k="width" data-u="px"></label>
+  <label>Code font<select data-k="code-font"><option value="ui-monospace,Menlo,monospace">SF Mono / Menlo</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
+  <label>Code size <span></span><input type="range" min="11" max="20" data-k="code-size" data-u="px"></label>
+  <label>Tab width <span></span><input type="range" min="2" max="8" step="2" data-k="tab"></label>
+  <label>Custom CSS<textarea data-k="css" rows="4" placeholder="#doc h1 { color: tomato }"></textarea></label>
+  <h4>Writing</h4>
+  <label><input type="checkbox" data-k="typewriter"> Typewriter mode: keep the current line centered</label>
+  <label><input type="checkbox" data-k="focus"> Focus mode: dim everything but the current block</label>
+  <label><input type="checkbox" data-k="outline"> Outline (table of contents) sidebar</label>
+  <label>Auto-save<select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
+  <label>Save pasted images to<select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
+  <h4>PDF</h4>
+  <label>Page size<select data-k="paper"><option value="a4">A4</option><option value="letter">Letter</option></select></label>
+  <label>Margins <span></span><input type="range" min="5" max="40" data-k="margin" data-u="mm"></label>
+  <label><input type="checkbox" data-k="pagenums"> Page numbers (header &amp; footer)</label>
+</div>
+<div id="drop"></div>
+<input type="file" id="file" accept=".md,.markdown,.txt" hidden>
+<script>
+const $ = s => document.querySelector(s);
+// The page is the whole app; the host shell (MDView.app today) only answers `native.postMessage({cmd, ...})`
+// for things a web page can't do: files, dialogs, clipboard, printing, windows. Keep it that way for portability.
+const native = window.webkit?.messageHandlers?.native;
+const QL = window.QL_MODE === true;  // set by the Quick Look extension
+const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
+const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
+const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0'};
+const opt = k => store.get('set-' + k) ?? String(DEFAULTS[k] ?? '');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const themeName = () => opt('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+const dark = () => themeName() !== 'light';
+
+// ---- tab state: every open document is a tab {name, path, base, value, dirty, handle} ----
+let tabs = [], active = 0, editor = null, editorTab = null, ready = false, mode = 'read';
+const T = () => tabs[active];
+
+// CommonMark + GFM (tables, tasks, strike, autolinks), footnotes, [toc], ==mark==, ^sup^, ~sub~,
+// $KaTeX$, YAML front matter, raw HTML (sanitized), and ```mermaid / flowchart / graphviz / echarts / abc / markmap.
+const markdown = () => ({toc: true, footnotes: true, mark: true, sup: true, sub: true, gfmAutoLink: true, sanitize: true,
+  codeBlockPreview: true, mathBlockPreview: true, autoSpace: false, fixTermTypo: false, linkBase: T()?.base || ''});
+const theme = () => ({current: dark() ? 'dark' : 'light', path: CDN + '/dist/css/content-theme'});
+const hljs = () => ({style: dark() ? 'native' : 'github', lineNumber: true});
+
+// ---- View mode ----
+function renderView(){
+  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hljs(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
+}
+
+// ---- Edit (inline WYSIWYG) and Source (raw markdown) modes ----
+const blocks = [ // slash menu for people new to markdown
+  ['Heading 1', '# '], ['Heading 2', '## '], ['Heading 3', '### '],
+  ['Bullet list', '- '], ['Numbered list', '1. '], ['Checklist', '- [ ] '], ['Quote', '> '],
+  ['Callout (note)', '> [!NOTE]\n> '], ['Code block', '```js\n\n```'], ['Table', '| Column | Column |\n| --- | --- |\n|  |  |'],
+  ['Math block', '$$\na^2 + b^2 = c^2\n$$'], ['Mermaid diagram', '```mermaid\ngraph LR\n  A --> B\n```'],
+  ['Sequence diagram', '```mermaid\nsequenceDiagram\n  Alice->>Bob: Hi\n  Bob-->>Alice: Hello\n```'],
+  ['Gantt chart', '```mermaid\ngantt\n  title Plan\n  section Work\n  Task A :a1, 2026-01-01, 7d\n  Task B :after a1, 5d\n```'],
+  ['Flowchart.js', '```flowchart\nst=>start: Start\ne=>end: End\nst->e\n```'],
+  ['Footnote', 'Text[^1]\n\n[^1]: The footnote.'], ['Table of contents', '[toc]'], ['Front matter', '---\ntitle: \ntags: []\n---\n'],
+  ['Highlight', '==highlighted=='], ['Superscript', 'x^2^'], ['Subscript', 'H~2~O'],
+  ['Divider', '---'], ['Link', '[text](https://)'], ['Image', '![alt](https://)'],
+];
+// ponytail: one editor instance re-created per tab switch; per-tab undo history is lost on switch. Keep one Vditor per tab if that matters.
+function createEditor(kind){
+  if (ready) editor.destroy(); else $('#editor').innerHTML = ''; // Vditor can't destroy mid-init
+  ready = false;
+  const tab = editorTab = T();
+  editor = new Vditor('editor', {
+    cdn: CDN, lang: 'en_US', mode: kind, value: tab.value, height: '100%', cache: {enable: false},
+    theme: dark() ? 'dark' : 'classic', icon: 'material',
+    typewriterMode: opt('typewriter') === 'true',
+    outline: {enable: opt('outline') === 'true', position: 'left'},
+    placeholder: kind === 'sv' ? '' : 'Type / for blocks, : for emoji, or just start writing…',
+    toolbar: kind === 'sv' ? ['undo', 'redo'] :
+      ['headings', 'bold', 'italic', 'strike', 'link', '|', 'list', 'ordered-list', 'check', 'quote', 'code', 'inline-code', 'table', 'emoji', 'upload', '|', 'undo', 'redo', '|', 'outline', 'edit-mode'],
+    preview: {mode: 'editor', theme: theme(), hljs: hljs(), markdown: markdown(), math: {engine: 'KaTeX'}},
+    hint: {emojiPath: CDN + '/dist/images/emoji', extend: [{key: '/', hint: q => blocks
+      .filter(([t]) => t.toLowerCase().includes(q.toLowerCase()))
+      .map(([t, v]) => ({html: t, value: v}))}]},
+    upload: {accept: 'image/*', multiple: true, handler: saveAssets},
+    input: v => changed(v, tab),
+    after: () => { ready = true; editor.focus(); },
+  });
+}
+// the editor's text back into its tab (the editor only holds the live copy)
+function commit(){ if (editorTab && ready) editorTab.value = editor.getValue(); }
+const current = () => editorTab === T() && ready ? editor.getValue() : T().value;
+function changed(v, t = T()){
+  t.value = v;
+  if (!t.dirty) { t.dirty = true; syncChrome(); } else if (t === T()) stats();
+  scheduleAutosave(t);
+}
+
+// ---- Focus mode ----
+document.addEventListener('selectionchange', () => {
+  if (!document.body.classList.contains('focus')) return;
+  const root = ready && editor.vditor[editor.getCurrentMode()]?.element; // the visible pane (Vditor keeps hidden ones)
+  let n = getSelection().anchorNode;
+  while (n && n.parentNode !== root) n = n.parentNode;
+  if (n?.classList?.contains('md-active')) return;
+  root?.querySelectorAll(':scope > .md-active').forEach(e => e.classList.remove('md-active'));
+  n?.classList?.add('md-active');
+});
+
+// ---- Assets: pasted / dropped / uploaded images go next to the document ----
+async function saveAssets(files){
+  if (!native) return 'Image saving works in the MDView app.';
+  const lines = [];
+  for (const f of files) {
+    const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(f); });
+    const res = await native.postMessage({cmd: 'asset', doc: T().path, name: f.name || 'image.png', data, folder: opt('assets') || 'assets'});
+    if (res.error) return res.error;
+    lines.push(`![${f.name.replace(/\.\w+$/, '')}](${res.path})`);
+  }
+  editor.insertValue(lines.join('\n'));
+  return null;
+}
+
+// ---- modes ----
+async function setMode(m){
+  if (QL) m = 'read';
+  commit();
+  mode = m;
+  for (const c of ['read', 'edit', 'source']) document.body.classList.toggle(c, c === m);
+  document.body.classList.toggle('ql', QL);
+  $('#mRead').classList.toggle('on', m === 'read');
+  $('#mEdit').classList.toggle('on', m === 'edit');
+  $('#mSource').classList.toggle('on', m === 'source');
+  if (m === 'read') { editorTab = null; await renderView(); } else createEditor(m === 'edit' ? 'ir' : 'sv');
+}
+$('#mRead').onclick = () => setMode('read');
+$('#mEdit').onclick = () => setMode('edit');
+$('#mSource').onclick = () => setMode('source');
+
+// ---- tabs ----
+function newTab(o = {}){
+  tabs.push({name: 'Untitled.md', path: '', base: '', value: '', dirty: false, handle: null, blank: true, ...o});
+  switchTo(tabs.length - 1);
+}
+function switchTo(i){
+  commit();
+  active = Math.max(0, Math.min(i, tabs.length - 1));
+  syncChrome();
+  setMode(mode);
+}
+const pristine = t => t && t.blank && !t.dirty; // an untouched new/welcome tab
+// Called by the host (and by drag-and-drop / Open) with a file's contents. Reuses the tab if the file is already open.
+function load(name, text, dir = '', path = '', dirty = false){
+  const open = path ? tabs.findIndex(t => t.path === path) : -1;
+  if (open >= 0) return switchTo(open);
+  const t = {name, value: text, base: dir, path, dirty, blank: false};
+  if (pristine(T())) { Object.assign(T(), t); editorTab = null; switchTo(active); } // replace an empty/welcome tab
+  else newTab(t);
+}
+async function closeTab(i){
+  const t = tabs[i]; if (!t) return false;
+  if (t === editorTab) commit();
+  if (t.dirty) {
+    if (i !== active) switchTo(i);
+    const r = await ask(`Save changes to ${t.name}?`, "Your changes will be lost if you don't save them.", ['Save', "Don't Save", 'Cancel']);
+    if (r === 2 || (r === 0 && !(await saveTab(t)))) return false;
+  }
+  removeTab(t);
+  return true;
+}
+function removeTab(t){
+  const i = tabs.indexOf(t); if (i < 0) return;
+  if (t === editorTab) editorTab = null;
+  const cur = T();
+  tabs.splice(i, 1);
+  if (!tabs.length) return native ? native.postMessage({cmd: 'closeWindow'}) : newTab();
+  if (cur === t) switchTo(Math.min(i, tabs.length - 1));
+  else { active = tabs.indexOf(cur); syncChrome(); }
+}
+function moveToWindow(t){
+  if (t === editorTab) commit();
+  native.postMessage({cmd: 'newWindow', name: t.name, text: t.value, path: t.path, base: t.base, dirty: t.dirty});
+  removeTab(t);
+}
+function renameTab(t){
+  const el = $(`#tabs .tab[data-i="${tabs.indexOf(t)}"] .tn`); if (!el) return;
+  const input = document.createElement('input');
+  input.value = t.name; input.setAttribute('aria-label', 'File name');
+  el.replaceWith(input);
+  input.focus(); input.setSelectionRange(0, t.name.replace(/\.\w+$/, '').length);
+  let done = false;
+  const finish = async ok => {
+    if (done) return; done = true;
+    let name = input.value.trim();
+    if (ok && name && name !== t.name) {
+      if (/[\/\\:]/.test(name) || name.startsWith('.')) await ask('Invalid name', 'File names can’t start with a dot or contain / \\ or :', ['OK']);
+      else {
+        if (!/\.\w+$/.test(name)) name += '.md';
+        if (t.path && native) { // renames the file on disk
+          const r = await native.postMessage({cmd: 'rename', path: t.path, name});
+          if (r.error) await ask('Couldn’t rename', r.error, ['OK']); else Object.assign(t, r);
+        } else t.name = name;    // not saved yet: just the name it will be saved as
+      }
+    }
+    syncChrome(); refreshTreeIfOpen();
+  };
+  input.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); };
+  input.onblur = () => finish(true);
+}
+function renderTabs(){
+  $('#tabs').innerHTML = tabs.map((t, i) =>
+    `<div class="tab${i === active ? ' cur' : ''}${t.dirty ? ' dirty' : ''}" draggable="true" data-i="${i}" title="${esc(t.path || t.name)}" role="tab" aria-selected="${i === active}">` +
+    `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">×</button></div>`).join('') +
+    `<button id="newTab" title="New tab (⌘T)" aria-label="New tab">+</button>`;
+  $('#tabs .cur')?.scrollIntoView({block: 'nearest', inline: 'nearest'});
+}
+// title bar, dirty dot, session restore: the host keeps what it needs from this one message
+function syncChrome(){
+  renderTabs(); stats(); markTree();
+  if (native && !QL) native.postMessage({cmd: 'state', title: T().name, path: T().path, dirty: tabs.some(t => t.dirty), paths: tabs.map(t => t.path).filter(Boolean)});
+}
+const tabsEl = $('#tabs');
+tabsEl.addEventListener('click', e => {
+  if (e.target.id === 'newTab') return newTab();
+  const x = e.target.closest('[data-close]'); if (x) return closeTab(+x.dataset.close);
+  const el = e.target.closest('.tab');
+  if (el && +el.dataset.i !== active && !e.target.closest('input')) switchTo(+el.dataset.i);
+});
+tabsEl.addEventListener('auxclick', e => { const el = e.target.closest('.tab'); if (el && e.button === 1) closeTab(+el.dataset.i); });
+tabsEl.addEventListener('dblclick', e => {
+  const el = e.target.closest('.tab');
+  if (el && !e.target.closest('button,input')) renameTab(tabs[+el.dataset.i]);
+  else if (e.target === tabsEl) newTab();
+});
+tabsEl.addEventListener('contextmenu', e => {
+  const el = e.target.closest('.tab'); if (!el) return;
+  e.preventDefault();
+  const t = tabs[+el.dataset.i];
+  showMenu(e.clientX, e.clientY, [
+    ['Rename…', () => renameTab(t)],
+    native && ['Move to New Window', () => moveToWindow(t)],
+    ['Close', () => closeTab(tabs.indexOf(t))],
+    ['Close Others', async () => { for (const o of tabs.filter(o => o !== t)) if (!(await closeTab(tabs.indexOf(o)))) break; }],
+  ]);
+});
+// drag to reorder; drag a tab out of the window to move it to a new window
+let dragFrom = -1;
+tabsEl.addEventListener('dragstart', e => { const el = e.target.closest('.tab'); if (!el) return; dragFrom = +el.dataset.i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tabs[dragFrom].name); });
+tabsEl.addEventListener('dragover', e => {
+  if (dragFrom < 0) return; e.preventDefault();
+  tabsEl.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+  e.target.closest('.tab')?.classList.add('over');
+});
+tabsEl.addEventListener('drop', e => {
+  const el = e.target.closest('.tab'); if (dragFrom < 0 || !el) return;
+  e.preventDefault();
+  const cur = T(), [t] = tabs.splice(dragFrom, 1);
+  tabs.splice(+el.dataset.i, 0, t);
+  active = tabs.indexOf(cur); dragFrom = -1; syncChrome();
+});
+tabsEl.addEventListener('dragend', e => {
+  tabsEl.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+  const outside = e.clientX < 0 || e.clientY < 0 || e.clientX > innerWidth || e.clientY > innerHeight;
+  if (dragFrom >= 0 && native && outside && e.dataTransfer.dropEffect === 'none') moveToWindow(tabs[dragFrom]);
+  dragFrom = -1;
+});
+function showMenu(x, y, items){
+  const m = $('#ctx'); m.innerHTML = '';
+  for (const it of items.filter(Boolean)) {
+    const b = document.createElement('button'); b.textContent = it[0]; b.setAttribute('role', 'menuitem');
+    b.onclick = () => { m.style.display = 'none'; it[1](); };
+    m.append(b);
+  }
+  Object.assign(m.style, {display: 'block', left: Math.min(x, innerWidth - 200) + 'px', top: Math.min(y, innerHeight - m.offsetHeight - 8) + 'px'});
+}
+addEventListener('mousedown', e => { if (!e.target.closest('#ctx')) $('#ctx').style.display = 'none'; });
+
+// in-page dialog (same look on every platform); resolves to the clicked button's index, Esc = last button
+function ask(title, msg, buttons){
+  const d = $('#ask');
+  d.querySelector('h3').textContent = title; d.querySelector('p').textContent = msg;
+  d.querySelector('.row').innerHTML = buttons.map((b, i) => `<button value="${i}"${i === 0 ? ' class="on" autofocus' : ''}>${esc(b)}</button>`).join('');
+  d.showModal();
+  return new Promise(r => { // answer on click / Esc directly rather than waiting for the dialog's close event
+    d.querySelectorAll('.row button').forEach((btn, i) => btn.onclick = () => r(i));
+    d.oncancel = () => r(buttons.length - 1);
+  });
+}
+
+// ---- word counter ----
+function stats(){
+  const v = T().value, t = v.replace(/```[\s\S]*?```/g, ' ');
+  const words = (t.match(/[\p{L}\p{N}'’-]+/gu) || []).length;
+  const paras = v.split(/\n\s*\n/).filter(s => s.trim()).length;
+  $('#stats').textContent = `${words.toLocaleString()} words · ${v.length.toLocaleString()} characters · ${paras} paragraphs`;
+}
+
+// ---- open / save ----
+$('#open').onclick = async () => {
+  if (native) return native.postMessage({cmd: 'open'});
+  if (window.showOpenFilePicker) {
+    try { const [h] = await showOpenFilePicker({types: [{accept: {'text/markdown': ['.md', '.markdown']}}]}); const f = await h.getFile(); load(f.name, await f.text()); T().handle = h; } catch {}
+  } else $('#file').click();
+};
+$('#file').onchange = async e => { const f = e.target.files[0]; if (f) load(f.name, await f.text()); };
+function download(name, data, type){
+  if (native) return native.postMessage({cmd: 'export', name, data});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], {type})); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+async function saveTab(t = T()){
+  if (t === editorTab) commit();
+  if (native) {
+    const r = await native.postMessage({cmd: 'save', path: t.path, name: t.name, data: t.value});
+    if (!r) return false;                                           // cancelled or failed
+    if (r.path) { Object.assign(t, r); if (t === T()) setMode(mode); } // Save As: new path, re-resolve images
+  } else if (t.handle?.createWritable) { const w = await t.handle.createWritable(); await w.write(t.value); await w.close(); }
+  else download(t.name, t.value, 'text/markdown');
+  t.dirty = false; syncChrome(); refreshTreeIfOpen();
+  return true;
+}
+const save = () => saveTab();
+// used by the host before closing a window / quitting
+async function saveAll(){ for (const t of tabs.filter(t => t.dirty)) if (!(await saveTab(t))) return false; return true; }
+$('#save').onclick = save;
+let autoTimer;
+function scheduleAutosave(t){ // only files that already exist on disk; never pops a save dialog
+  clearTimeout(autoTimer);
+  const s = +opt('autosave');
+  if (s && native && t.path) autoTimer = setTimeout(() => t.dirty && tabs.includes(t) && saveTab(t), s * 1000);
+}
+const isDoc = f => /\.(md|markdown|mdown|txt)$/i.test(f?.name || '');
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+addEventListener('dragover', e => { e.preventDefault(); if (mode === 'read' && hasFiles(e)) $('#drop').style.display = 'block'; });
+addEventListener('dragleave', e => { if (!e.relatedTarget) $('#drop').style.display = 'none'; });
+addEventListener('drop', async e => {
+  $('#drop').style.display = 'none';
+  const docs = [...(e.dataTransfer?.files || [])].filter(isDoc);
+  if (!docs.length) { if (mode === 'read' && hasFiles(e)) e.preventDefault(); return; } // images dropped while editing go to the editor
+  e.preventDefault(); e.stopPropagation();
+  for (const f of docs) load(f.name, await f.text()); // each dropped file opens in its own tab
+}, true);
+
+// ---- files sidebar (folder of the current document, or one picked with Open Folder) ----
+async function refreshTree(){
+  const el = $('#tree');
+  if (!native) { el.innerHTML = '<p class="hint">The files sidebar works in the MDView app.</p>'; return; }
+  const t = await native.postMessage({cmd: 'tree', doc: T().path});
+  const node = n => n.children
+    ? `<details ${n.open ? 'open' : ''}><summary>📁 ${esc(n.name)}</summary>${n.children.map(node).join('')}</details>`
+    : `<a data-path="${esc(n.path)}" title="${esc(n.path)}">${esc(n.name)}</a>`;
+  el.innerHTML = `<div class="row" style="padding:0 4px 8px"><button id="openFolder">Open folder…</button></div>` +
+    (t ? node({...t, open: true}) : '<p class="hint">Open a file or folder to browse it here.</p>');
+  $('#openFolder').onclick = async () => { await native.postMessage({cmd: 'openFolder'}); refreshTree(); };
+  markTree();
+}
+const refreshTreeIfOpen = () => document.body.classList.contains('tree') && refreshTree();
+function markTree(){ document.querySelectorAll('#tree a').forEach(a => a.classList.toggle('cur', a.dataset.path === T()?.path)); }
+$('#tree').addEventListener('click', e => {
+  const a = e.target.closest('a[data-path]');
+  if (a) native.postMessage({cmd: 'openPath', path: a.dataset.path}); // opens in a new tab, or switches to it
+});
+function toggleTree(){ const on = document.body.classList.toggle('tree'); store.set('tree', on); if (on) refreshTree(); }
+$('#tTree').onclick = toggleTree;
+
+// ---- find & replace (current document) ----
+function pattern(){
+  const q = $('#fq').value; if (!q) return null;
+  try { return new RegExp($('#fre').checked ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#fcase').checked ? 'g' : 'gi'); }
+  catch { $('#fcount').textContent = 'Invalid regular expression'; return null; }
+}
+function countMatches(){ const p = pattern(); $('#fcount').textContent = p ? `${(current().match(p) || []).length} matches in this document` : ''; }
+['fq', 'fre', 'fcase'].forEach(id => $('#' + id).addEventListener('input', countMatches));
+$('#fnext').onclick = () => { // highlights the next visible occurrence; regex patterns use the first literal match
+  const p = pattern(); if (!p) return;
+  const m = current().match(p); if (m) window.find(m[0], $('#fcase').checked, false, true);
+};
+$('#fall').onclick = () => {
+  const p = pattern(); if (!p) return;
+  const t = T(), v = current(), n = (v.match(p) || []).length;
+  if (!n) return;
+  changed(v.replace(p, $('#fr').value), t);
+  if (mode === 'read') renderView(); else editor.setValue(t.value);
+  $('#fcount').textContent = `Replaced ${n}`;
+};
+function pop(id){ const el = $(id), open = !el.classList.contains('open'); document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); el.classList.toggle('open', open); if (open && id === '#find') $('#fq').focus(); }
+$('#tFind').onclick = () => pop('#find');
+$('#gear').onclick = () => pop('#settings');
+
+// ---- export & copy (renders the View first so diagrams/math are included) ----
+$('#export').onchange = async e => {
+  const v = e.target.value; e.target.value = '';
+  commit();
+  const t = T(), name = t.name.replace(/\.\w+$/, '');
+  if (v === 'md') return download(name + '.md', t.value, 'text/markdown');
+  if (v === 'c-md') return copy({text: t.value});
+  if (mode !== 'read') await setMode('read');
+  const html = $('#doc').innerHTML;
+  if (v === 'pdf') native ? native.postMessage({cmd: 'print', paper: opt('paper') || 'a4', margin: opt('margin'), numbers: opt('pagenums')}) : print();
+  if (v === 'html') {
+    let css = '';
+    for (const s of document.styleSheets) try { css += [...s.cssRules].map(r => r.cssText).join('\n'); } catch {}
+    download(name + '.html', `<!doctype html><html data-theme="${themeName()}"><meta charset="utf-8"><title>${esc(name)}</title><style>${css}</style><body style="height:auto;display:block;padding:24px 16px"><article id="doc" class="vditor-reset" style="${document.documentElement.style.cssText}">${html}</article>`, 'text/html');
+  }
+  if (v === 'c-html') copy({text: html});
+  if (v === 'c-text') copy({text: $('#doc').innerText});
+  if (v === 'c-rich') copy({html, text: $('#doc').innerText});
+};
+async function copy({html, text}){
+  if (native) return native.postMessage({cmd: 'copy', html: html ?? '', text});
+  const items = {'text/plain': new Blob([text], {type: 'text/plain'})};
+  if (html) items['text/html'] = new Blob([html], {type: 'text/html'});
+  await navigator.clipboard.write([new ClipboardItem(items)]);
+}
+
+// ---- live settings ----
+document.querySelectorAll('#settings [data-k]').forEach(el => {
+  const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox';
+  if (box) el.checked = opt(k) === 'true'; else if (opt(k) !== '') el.value = opt(k);
+  const apply = rerender => {
+    const v = box ? String(el.checked) : el.value;
+    store.set('set-' + k, v);
+    if (el.previousElementSibling?.tagName === 'SPAN') el.previousElementSibling.textContent = v + u;
+    if (k === 'theme') document.documentElement.dataset.theme = themeName();
+    else if (k === 'css') $('#userCss').textContent = v;
+    else if (k === 'focus') document.body.classList.toggle('focus', el.checked);
+    else if (['font', 'size', 'lh', 'width', 'code-font', 'code-size', 'tab'].includes(k)) document.documentElement.style.setProperty('--' + k, v + u);
+    // theme, typewriter and outline are editor options: rebuild. Everything else is CSS and updates instantly.
+    if (rerender && ['theme', 'typewriter', 'outline'].includes(k)) setMode(mode);
+  };
+  el.addEventListener(box || el.tagName === 'SELECT' ? 'change' : 'input', () => apply(true));
+  apply(false);
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!opt('theme')) { document.documentElement.dataset.theme = themeName(); setMode(mode); } });
+
+// ---- shortcuts (⌘ on macOS, Ctrl elsewhere) ----
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); $('#ctx').style.display = 'none'; }
+  if (e.ctrlKey && e.key === 'Tab') { e.preventDefault(); return switchTo((active + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length); }
+  if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+  if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
+  const k = {s: save, o: () => $('#open').click(), f: () => pop('#find'), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active),
+    1: () => setMode('read'), 2: () => setMode('edit'), 3: () => setMode('source')}[e.key];
+  if (k) { e.preventDefault(); k(); }
+}, true);
+$('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#fnext').click(); });
+
+const WELCOME = `# Welcome to MDView
+
+You're in **View mode**: select and copy freely, nothing changes.
+
+- **Edit** (⌘2) edits inline like Typora. Type \`/\` for blocks and \`:\` for emoji.
+- **Source** (⌘3) shows the raw markdown.
+- **Tabs**: ⌘T new tab, ⌘W close, Ctrl+Tab to switch. Double-click a tab to rename the file, drag to reorder, right-click to move it to a new window.
+- ⚙ has themes, typewriter mode, focus mode, auto-save and more. Changes apply live.
+
+Math $E = mc^2$, ==highlight==, H~2~O, x^2^, footnotes[^1], and diagrams:
+
+\`\`\`mermaid
+graph LR
+  Write --> Preview --> Export
+\`\`\`
+
+[^1]: Like this one.
+`;
+newTab(QL || FRESH ? {} : {name: 'Welcome.md', value: WELCOME});
+if (!QL && store.get('tree') === 'true') toggleTree();
+</script>
+</body>
+</html>
