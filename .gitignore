@@ -1,3 +1,6 @@
 build/
 .DS_Store
 .claude/
+shells/*/node_modules/
+shells/tauri/src-tauri/target/
+shells/tauri/src-tauri/gen/

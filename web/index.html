@@ -1036,6 +1036,11 @@ async function saveTab(t = T()){
 const save = () => saveTab();
 // used by the host before closing a window / quitting
 async function saveAll(){ for (const t of tabs.filter(t => t.dirty)) if (!(await saveTab(t))) return false; return true; }
+// Tauri/Electron ask here before closing a window with unsaved tabs (the macOS app uses a native alert)
+async function confirmClose(){
+  const r = await ask('Save changes before closing?', 'Some documents in this window have unsaved changes.', ['Save All', "Don't Save", 'Cancel']);
+  return r === 1 || (r === 0 && await saveAll());
+}
 $('#save').onclick = save;
 let autoTimer;
 function scheduleAutosave(t){ // only files that already exist on disk; never pops a save dialog
