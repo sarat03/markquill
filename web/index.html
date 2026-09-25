@@ -444,7 +444,7 @@ let tabs = [], active = 0, editor = null, editorTab = null, ready = false, mode 
 const T = () => tabs[active];
 
 // CommonMark + GFM (tables, tasks, strike, autolinks), footnotes, [toc], ==mark==, ^sup^, ~sub~,
-// $KaTeX$, YAML front matter, raw HTML (sanitized), and ```mermaid / flowchart / graphviz / echarts / abc / markmap.
+// $KaTeX$, YAML front matter, raw HTML (sanitized), and ```mermaid / flowchart / markmap (graphviz, echarts, abc, smiles, wavedrom and plantuml engines are left out to keep the app small).
 const markdown = () => ({toc: true, footnotes: true, mark: true, sup: true, sub: true, gfmAutoLink: true, sanitize: true,
   codeBlockPreview: true, mathBlockPreview: true, autoSpace: false, fixTermTypo: false, linkBase: T()?.base || ''});
 const theme = () => ({current: dark() ? 'dark' : 'light', path: CDN + '/dist/css/content-theme'});
