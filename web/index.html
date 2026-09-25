@@ -7,135 +7,318 @@
 <link rel="stylesheet" href="vditor/dist/index.css">
 <script src="vditor/dist/index.min.js"></script>
 <style>
-:root{--bg:#fff;--fg:#1f2328;--mute:#656d76;--line:#d0d7de;--panel:#f6f8fa;--accent:#0969da;
-  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,monospace;--code-size:14px;--tab:4}
-:root[data-theme=dark]{--bg:#1d2125;--fg:#d1d5da;--mute:#8d96a0;--line:#30363d;--panel:#24292e;--accent:#4493f8}
-:root[data-theme=material]{--bg:#263238;--fg:#eeffff;--mute:#89a2ab;--line:#37474f;--panel:#2e3c43;--accent:#82aaff}
-:root[data-theme=onedark]{--bg:#282c34;--fg:#abb2bf;--mute:#7f848e;--line:#3e4451;--panel:#21252b;--accent:#61afef}
+/* ---- design tokens: chrome (panel) sits a step away from the document (bg), like a macOS sidebar ---- */
+:root{--bg:#fff;--fg:#1f2328;--mute:#6b7079;--line:#e3e4e8;--panel:#f7f7f8;--hover:#ebebee;--raised:#fff;--accent:#0969da;--accent-soft:#0969da1f;
+  --shadow:0 10px 30px #0000001f,0 0 0 1px #0000000d;--ui:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",sans-serif;
+  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,monospace;--code-size:14px;--tab:4;
+  --gutter:clamp(16px,5vw,40px);accent-color:var(--accent)}
+:root[data-theme=dark]{--bg:#1d2125;--fg:#d1d5da;--mute:#8b949e;--line:#30363d;--panel:#171a1d;--hover:#2a2f35;--raised:#353b43;--accent:#4493f8;--accent-soft:#4493f833;--shadow:0 10px 30px #00000073,0 0 0 1px #ffffff14}
+:root[data-theme=material]{--bg:#263238;--fg:#eeffff;--mute:#89a2ab;--line:#37474f;--panel:#1e282d;--hover:#30414a;--raised:#3b4c55;--accent:#82aaff;--accent-soft:#82aaff33;--shadow:0 10px 30px #00000073,0 0 0 1px #ffffff14}
+:root[data-theme=onedark]{--bg:#282c34;--fg:#abb2bf;--mute:#7f848e;--line:#3a3f4b;--panel:#21252b;--hover:#2f343d;--raised:#3e4451;--accent:#61afef;--accent-soft:#61afef33;--shadow:0 10px 30px #00000073,0 0 0 1px #ffffff14}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;flex-direction:column}
-header{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
-header .spacer{margin-right:auto}
-button,select,input[type=text],textarea{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
-button,select{cursor:pointer}
-button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-.group{display:flex}.group button{border-radius:0;margin-left:-1px}.group button:first-child{border-radius:6px 0 0 6px}.group button:last-child{border-radius:0 6px 6px 0}
-/* tabs */
-#tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex:none}
-.tab{display:flex;align-items:center;gap:2px;padding:0 4px 0 12px;height:32px;font-size:13px;border-right:1px solid var(--line);cursor:default;max-width:220px;color:var(--mute);white-space:nowrap;user-select:none;flex:none}
-.tab .tn{overflow:hidden;text-overflow:ellipsis}
-.tab.cur{background:var(--bg);color:var(--fg);box-shadow:inset 0 2px 0 var(--accent)}
-.tab.over{box-shadow:inset 3px 0 0 var(--accent)}
-.tab .x{border:0;background:none;padding:0;width:20px;height:20px;border-radius:4px;visibility:hidden;color:var(--mute);font-size:15px;line-height:1}
-.tab .x:hover{background:var(--line)}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 var(--ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.vh{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+[contenteditable]:focus-visible{outline:0} /* the writing surface itself */
+
+/* ---- controls ---- */
+button,select,input[type=text],textarea{font:inherit;color:var(--fg)}
+button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--raised);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s,border-color .12s}
+button:hover{background:var(--hover)}
+button.on,button.on:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+button.icon{width:30px;height:30px;padding:0;border:0;background:none;color:var(--mute);position:relative}
+button.icon:hover,button.icon[aria-expanded=true]{background:var(--hover);color:var(--fg)}
+select,input[type=text],textarea{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+select{height:28px;cursor:pointer}
+textarea{resize:vertical;font:12px/1.5 var(--code-font)}
+input[type=text]:focus,textarea:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+kbd{font:inherit;font-size:11px;opacity:.7}
+/* segmented control (mode switch, font, paper) */
+.seg{display:inline-flex;padding:2px;gap:2px;border-radius:8px;background:var(--hover)}
+.seg>button,.seg>label>span{height:26px;padding:0 10px;border:0;border-radius:6px;background:none;color:var(--mute);display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.seg>button:hover,.seg>label>span:hover{background:none;color:var(--fg)}
+.seg>button.on,.seg>label>input:checked+span{background:var(--raised);color:var(--fg);box-shadow:0 1px 2px #0000001f,0 0 0 .5px #0000000f}
+.seg>label>input:focus-visible+span{outline:2px solid var(--accent)}
+.seg.full{display:flex}.seg.full>label{flex:1}.seg.full>label>span{width:100%}
+/* toggle switch */
+.switch{appearance:none;-webkit-appearance:none;flex:none;width:30px;height:18px;margin:0;border-radius:9px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0000004d;transition:transform .15s}
+.switch:checked{background:var(--accent)}.switch:checked::after{transform:translateX(12px)}
+/* slider */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;margin:4px 0 0;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:#fff;border:.5px solid #0000002e;box-shadow:0 1px 3px #0000004d}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:.5px solid #0000002e;box-shadow:0 1px 3px #0000004d}
+
+/* ---- app layout: [files sidebar] [bar / document / status] [settings panel] ---- */
+.app{display:flex;height:100%}
+.pane{flex:1;min-width:0;display:flex;flex-direction:column}
+.side{flex:none;width:250px;display:none;flex-direction:column;background:var(--panel)}
+#side{border-right:1px solid var(--line)}#settings{width:290px;border-left:1px solid var(--line)}
+body.tree #side,#settings.open{display:flex}
+.side-head{flex:none;height:41px;display:flex;align-items:center;gap:4px;padding:0 6px 0 14px;border-bottom:1px solid var(--line)}
+.side-head h2{flex:1;margin:0;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* bar: tabs + actions in one row */
+#bar{flex:none;height:41px;display:flex;align-items:flex-end;gap:4px;padding:0 8px;background:var(--panel);box-shadow:inset 0 -1px 0 var(--line)}
+#bar>.icon,.actions{align-self:center}
+.actions{display:flex;align-items:center;gap:2px;flex:none}
+.actions .sep{width:1px;height:18px;background:var(--line);margin:0 6px}
+#save.dirty::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+
+/* tabs: the active tab joins the page below it */
+#tabs{flex:1;min-width:0;display:flex;align-items:flex-end;gap:2px;height:100%;overflow-x:auto;scrollbar-width:none;padding-left:4px}
+#tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 1 190px;min-width:96px;height:32px;margin-bottom:4px;display:flex;align-items:center;gap:4px;padding:0 4px 0 12px;border-radius:7px;color:var(--mute);cursor:default;user-select:none;-webkit-user-select:none;position:relative}
+.tab:hover{background:var(--hover);color:var(--fg)}
+.tab.cur{height:36px;margin-bottom:0;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:var(--bg);color:var(--fg);font-weight:500}
+.tab.over::before{content:"";position:absolute;left:-2px;top:6px;bottom:6px;width:2px;border-radius:1px;background:var(--accent)}
+.tab .tn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab .x{width:20px;height:20px;padding:0;border:0;border-radius:4px;background:none;color:var(--mute);visibility:hidden}
+.tab .x svg{width:13px;height:13px}
+.tab .x:hover{background:var(--line);color:var(--fg)}
 .tab:hover .x,.tab.cur .x,.tab.dirty .x{visibility:visible}
-.tab.dirty:not(:hover) .x{font-size:0}
-.tab.dirty:not(:hover) .x::after{content:"●";font-size:10px}
-.tab input{font:inherit;width:150px;padding:1px 4px;border-radius:4px}
-#newTab{border:0;background:none;padding:0 12px;font-size:17px;color:var(--mute);border-radius:0}
-#newTab:hover{color:var(--fg)}
-.menu{display:none;position:fixed;min-width:190px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #0003;z-index:300}
-.menu button{display:block;width:100%;text-align:left;border:0;border-radius:4px;background:none;padding:6px 10px}
-.menu button:hover{background:var(--panel)}
-dialog{border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);padding:18px 20px;width:min(380px,calc(100vw - 32px))}
-dialog::backdrop{background:#0005}
-dialog h3{margin:0 0 6px;font-size:15px}dialog p{margin:0 0 16px;font-size:13px;color:var(--mute)}
-dialog .row{display:flex;gap:8px;justify-content:flex-end}
-/* layout */
-.wrap{flex:1;min-height:0;display:flex}
+.tab.dirty:not(:hover) .x svg{display:none}
+.tab.dirty:not(:hover) .x::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.tab input{font:inherit;width:100%;height:22px;padding:0 4px}
+#newTab{flex:none;width:28px;height:28px;margin-bottom:6px}
+
+/* document */
+.body{flex:1;min-height:0;display:flex}
 main{flex:1;min-width:0;position:relative}
-#tree{width:240px;flex:none;overflow:auto;border-right:1px solid var(--line);background:var(--panel);font-size:13px;padding:8px 4px;display:none}
-body.tree #tree{display:block}
-#tree summary,#tree a{display:block;padding:3px 8px;border-radius:4px;cursor:pointer;color:var(--fg);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tree a:hover,#tree summary:hover{background:var(--line)}#tree a.cur{background:var(--accent);color:#fff}
-#tree details details,#tree details>a{margin-left:12px}
-#tree .hint{color:var(--mute);padding:8px}
-#out{position:absolute;inset:0;overflow:auto;padding:24px 16px}
-#editor{height:100%;border:0!important}
+#out{position:absolute;inset:0;overflow:auto;padding:48px var(--gutter) 30vh}
+#editor{height:100%}
 body.read #editor,body.edit #out,body.source #out{display:none}
-/* live settings apply to reader, inline editor and source editor */
 #doc,.vditor-reset{font-family:var(--font)!important;font-size:var(--size)!important;line-height:var(--lh)!important;color:var(--fg)}
 #doc code,#doc pre,.vditor-reset code,.vditor-reset pre,.vditor-sv{font-family:var(--code-font)!important;tab-size:var(--tab)}
 #doc pre code,.vditor-reset pre code,.vditor-sv{font-size:var(--code-size)!important}
-#doc{max-width:var(--width);margin:0 auto}
-.vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:var(--width);margin:0 auto;padding-left:24px!important;padding-right:24px!important}
-.vditor,.vditor-toolbar,.vditor-reset,.vditor-sv{background:var(--bg)!important;color:var(--fg)}
-.vditor-toolbar{border-bottom:1px solid var(--line)!important;padding-left:8px!important}
+#doc{max-width:var(--width);margin:0 auto;padding:0}
+/* empty document */
+#empty{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:60%;text-align:center;color:var(--mute);font-size:14px}
+#empty>svg{width:44px;height:44px;stroke-width:1.2;margin-bottom:8px;opacity:.7}
+#empty h2{margin:0;font-size:18px;font-weight:600;color:var(--fg)}#empty p{margin:0 0 14px}
+#empty .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+body.empty #empty{display:flex}body.empty #doc{display:none}
+
+/* editor (Vditor), themed through its own variables so it reads as part of the page.
+   Edit and Source use the same centered column as View, so switching modes doesn't move the text. */
+.vditor{--border-color:var(--line);--second-color:var(--line);--panel-background-color:var(--bg);--panel-shadow:var(--shadow);--toolbar-background-color:var(--bg);--toolbar-icon-color:var(--mute);--toolbar-icon-hover-color:var(--fg);--textarea-background-color:var(--bg);--textarea-text-color:var(--fg);--toolbar-height:30px;--toolbar-divider-margin-top:7px;border:0!important;border-radius:0!important;background:var(--bg)}
+.vditor-toolbar{display:flex;flex-wrap:wrap;justify-content:center;padding:5px var(--gutter)!important;border-bottom:1px solid var(--line)!important}
+.vditor-toolbar__item .vditor-tooltipped{width:30px;padding:0;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.vditor-toolbar__item .vditor-tooltipped:hover{background:var(--hover)}
+.vditor-toolbar__divider{margin:7px 6px!important}
+body.source .vditor-toolbar{display:none}
+.vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:calc(var(--width) + 2 * var(--gutter));margin:0 auto!important;padding:40px var(--gutter) 30vh!important}
+.vditor-sv{max-width:calc(var(--width) + 2 * var(--gutter));margin:0 auto!important;padding:48px var(--gutter) 30vh!important;color:var(--fg)!important;background:var(--bg)!important}
+.vditor-outline{background:var(--panel)!important}
 /* focus mode: dim every block except the one holding the caret */
 body.focus .vditor-reset>*{opacity:.25;transition:opacity .15s}
 body.focus .vditor-reset>.md-active{opacity:1}
-footer{display:flex;gap:16px;justify-content:flex-end;padding:3px 12px;border-top:1px solid var(--line);background:var(--panel);color:var(--mute);font-size:12px}
-.pop{display:none;position:fixed;right:12px;top:52px;width:280px;max-height:calc(100vh - 90px);overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 8px 24px #0003;z-index:100}
-.pop.open{display:block}
-.pop label{display:block;font-size:13px;margin-bottom:10px}
-.pop input[type=range],.pop select,.pop textarea,.pop input[type=text]{width:100%;margin-top:4px}
-.pop h4{margin:14px 0 8px;font-size:12px;text-transform:uppercase;color:var(--mute)}
-.pop .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-#drop{display:none;position:fixed;inset:0;background:#0969da33;border:3px dashed var(--accent);z-index:200;pointer-events:none}
-body.ql header,body.ql footer,body.ql #tree,body.ql #tabs{display:none!important}
-@media print{header,footer,#tabs,#tree,#editor,.pop,.menu{display:none!important}#out{position:static;overflow:visible;display:block!important}}
+
+/* find bar (floats over the top right of the document) */
+#find{display:none;position:absolute;top:10px;right:18px;z-index:50;width:min(380px,calc(100% - 24px));padding:8px;border-radius:10px;background:var(--raised);box-shadow:var(--shadow);flex-direction:column;gap:6px}
+#find.open{display:flex}
+body.edit #find{top:52px} /* below the formatting toolbar */
+#find .frow{display:flex;align-items:center;gap:4px}
+#find input[type=text]{flex:1;min-width:0;height:28px}
+#fcount{flex:none;min-width:0;max-width:110px;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+#fcount:empty{display:none}
+.tog{flex:none;height:28px;min-width:28px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;color:var(--mute);font:600 12px var(--code-font);cursor:pointer}
+.tog:hover{background:var(--hover);color:var(--fg)}
+.tog:has(:checked){background:var(--accent-soft);color:var(--accent)}
+.tog:has(:focus-visible){outline:2px solid var(--accent)}
+#find .icon{width:28px;height:28px}
+#fall{flex:none}
+
+/* files sidebar */
+#tree{flex:1;overflow:auto;padding:6px}
+#tree summary,#tree a{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-radius:6px;color:var(--fg);text-decoration:none;white-space:nowrap;cursor:pointer;list-style:none}
+#tree summary::-webkit-details-marker{display:none}
+#tree summary span,#tree a span{overflow:hidden;text-overflow:ellipsis}
+#tree summary{font-weight:500}
+#tree summary svg{width:12px;height:12px;color:var(--mute);transition:transform .12s}
+#tree details[open]>summary svg{transform:rotate(90deg)}
+#tree a svg{color:var(--mute)}
+#tree a:hover,#tree summary:hover{background:var(--hover)}
+#tree a.cur{background:var(--accent-soft);color:var(--accent)}#tree a.cur svg{color:var(--accent)}
+#tree .kids{margin-left:14px;padding-left:4px;border-left:1px solid var(--line)}
+#tree .hint{color:var(--mute);padding:10px 8px;margin:0;line-height:1.5}
+
+/* settings panel */
+#settings .scroll{flex:1;overflow:auto;padding:4px 16px 24px}
+#settings h3{margin:20px 0 10px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
+.field{display:block;margin-bottom:14px}
+.fl{display:flex;justify-content:space-between;margin-bottom:6px}
+.fl output{color:var(--mute);font-variant-numeric:tabular-nums}
+.toggle{display:flex;align-items:center;gap:12px;margin-bottom:14px;cursor:pointer}
+.toggle>span{flex:1}.toggle small{display:block;color:var(--mute);font-size:12px;margin-top:1px}
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 8px;margin-bottom:16px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--mute);cursor:pointer}
+.sw:has(:checked){color:var(--fg);font-weight:500}
+.thumb{display:block;width:100%;height:46px;border-radius:7px;background:var(--t-bg);box-shadow:0 0 0 1px var(--line);position:relative;overflow:hidden}
+.thumb::before{content:"";position:absolute;left:0;top:0;bottom:0;width:28%;background:var(--t-panel)}
+.thumb::after{content:"";position:absolute;left:38%;right:14%;top:12px;height:4px;border-radius:2px;background:var(--t-fg);box-shadow:0 9px 0 var(--t-mute),0 18px 0 var(--t-accent)}
+.thumb.sys{background:linear-gradient(135deg,#fff 50%,#1d2125 50%)}.thumb.sys::before,.thumb.sys::after{display:none}
+.sw:has(:checked) .thumb{box-shadow:0 0 0 2px var(--accent)}
+.sw:has(:focus-visible) .thumb{outline:2px solid var(--accent);outline-offset:2px}
+
+/* status bar */
+#status{flex:none;height:26px;display:flex;align-items:center;gap:16px;padding:0 12px;border-top:1px solid var(--line);color:var(--mute);font-size:12px}
+#saveState{height:20px;padding:0 6px;margin-left:-6px;border:0;background:none;color:inherit;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;cursor:default;display:block}
+#saveState.dirty{cursor:pointer;color:var(--fg)}#saveState.dirty::before{content:"● ";color:var(--accent)}
+#saveState.dirty:hover{background:var(--hover)}
+#stats{margin-left:auto;flex:none;font-variant-numeric:tabular-nums}
+
+/* menus and dialogs, macOS-style */
+.menu{display:none;position:fixed;min-width:200px;padding:5px;border-radius:9px;background:var(--raised);box-shadow:var(--shadow);z-index:300}
+.menu button{display:flex;justify-content:flex-start;width:100%;height:26px;padding:0 10px;border:0;border-radius:5px;background:none}
+.menu button:hover,.menu button:focus-visible{background:var(--accent);color:#fff;outline:0}
+.menu hr{border:0;border-top:1px solid var(--line);margin:5px 4px}
+.menu .mh{padding:4px 10px 2px;font-size:11px;font-weight:600;color:var(--mute)}
+dialog{width:min(360px,calc(100vw - 32px));padding:20px;border:0;border-radius:12px;background:var(--raised);color:var(--fg);box-shadow:var(--shadow)}
+dialog::backdrop{background:#0000004d}
+dialog h3{margin:0 0 6px;font-size:14px;font-weight:600}dialog p{margin:0 0 18px;color:var(--mute);line-height:1.5}
+dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min-width:84px}
+#drop{display:none;position:fixed;inset:8px;border:2px dashed var(--accent);border-radius:12px;background:var(--accent-soft);z-index:200;pointer-events:none}
+#drop::after{content:"Drop Markdown files to open them";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 18px;border-radius:8px;background:var(--raised);box-shadow:var(--shadow);font-size:14px}
+
+/* narrower windows: icon-only modes, sidebars float over the document, then tabs get their own row */
+@media (max-width:900px){.seg.modes>button span{display:none}.seg.modes>button{padding:0 8px}}
+@media (max-width:720px){
+  .app{position:relative}
+  #side,#settings{position:absolute;top:0;bottom:0;z-index:100;box-shadow:var(--shadow)}
+  #side{left:0}#settings{right:0}
+}
+@media (max-width:560px){
+  #bar{height:auto;flex-wrap:wrap;padding-top:6px;row-gap:6px}
+  #bar>.actions{margin-left:auto}
+  #tabs{order:3;flex-basis:100%;height:40px;margin:0 -8px;padding:0 8px}
+  .actions .sep{margin:0 2px}
+}
+body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{display:none!important}
+@media print{#side,#bar,#status,#settings,#find,#editor,#empty,.menu{display:none!important}body,.app{height:auto;overflow:visible;display:block}#out{position:static;overflow:visible;display:block!important;padding:0}}
 </style>
 <style id="userCss"></style>
 </head>
 <body class="read">
-<header>
-  <button id="tTree" title="Files sidebar (⌘\)" aria-label="Files">☰</button>
-  <span class="spacer"></span>
-  <div class="group">
-    <button id="mRead" class="on" title="Read only: select and copy without editing (⌘1)">View</button>
-    <button id="mEdit" title="Inline WYSIWYG editing (⌘2). Type / for blocks.">Edit</button>
-    <button id="mSource" title="Raw markdown (⌘3)">Source</button>
+<div class="app">
+  <aside id="side" class="side" aria-label="Files">
+    <div class="side-head">
+      <h2 id="treeTitle">Files</h2>
+      <button id="openFolder" class="icon" title="Open folder…" aria-label="Open folder"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6M9 13h6"/></svg></button>
+    </div>
+    <nav id="tree"></nav>
+  </aside>
+
+  <div class="pane">
+    <header id="bar">
+      <button id="tTree" class="icon" title="Files sidebar (⌘\)" aria-label="Files sidebar" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>
+      <nav id="tabs" aria-label="Open documents" role="tablist"></nav>
+      <div class="actions">
+        <div class="seg modes" role="group" aria-label="Mode">
+          <button id="mRead" class="on" title="View: read and copy without editing (⌘1)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>View</span></button>
+          <button id="mEdit" title="Edit inline, like a document (⌘2). Type / for blocks."><svg class="i" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit</span></button>
+          <button id="mSource" title="Raw markdown (⌘3)"><svg class="i" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg><span>Source</span></button>
+        </div>
+        <span class="sep"></span>
+        <button id="open" class="icon" title="Open… (⌘O)" aria-label="Open file"><svg class="i" viewBox="0 0 24 24"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg></button>
+        <button id="save" class="icon" title="Save (⌘S)" aria-label="Save"><svg class="i" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button>
+        <button id="export" class="icon" title="Export or copy" aria-label="Export or copy" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg></button>
+        <span class="sep"></span>
+        <button id="tFind" class="icon" title="Find &amp; replace (⌘F)" aria-label="Find and replace" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button id="gear" class="icon" title="Appearance &amp; settings" aria-label="Settings" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></button>
+      </div>
+    </header>
+
+    <div class="body">
+      <main>
+        <div id="out"><article id="doc" class="vditor-reset"></article>
+          <div id="empty">
+            <svg class="i" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+            <h2>Nothing here yet</h2>
+            <p>Start writing, open a Markdown file, or drop one onto the window.</p>
+            <div class="row"><button class="on" data-go="edit">Start writing <kbd>⌘2</kbd></button><button data-go="open">Open file… <kbd>⌘O</kbd></button></div>
+          </div>
+        </div>
+        <div id="editor"></div>
+        <div id="find" role="search" aria-label="Find and replace">
+          <div class="frow">
+            <input type="text" id="fq" placeholder="Find" aria-label="Find">
+            <span id="fcount" aria-live="polite"></span>
+            <label class="tog" title="Match case"><input type="checkbox" id="fcase" class="vh">Aa</label>
+            <label class="tog" title="Regular expression"><input type="checkbox" id="fre" class="vh">.*</label>
+            <button id="fnext" class="icon" title="Find next (Enter)" aria-label="Find next"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
+            <button id="fclose" class="icon" title="Close (Esc)" aria-label="Close find"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <div class="frow">
+            <input type="text" id="fr" placeholder="Replace" aria-label="Replace with">
+            <button id="fall">Replace all</button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <footer id="status"><button id="saveState"></button><span id="stats"></span></footer>
   </div>
-  <button id="open">Open</button>
-  <button id="save">Save</button>
-  <select id="export" aria-label="Export and copy"><option value="">Export…</option>
-    <option value="html">Export HTML</option><option value="pdf">Export PDF</option><option value="md">Export Markdown</option>
-    <option value="c-md">Copy as Markdown</option><option value="c-html">Copy as HTML</option><option value="c-text">Copy as plain text</option><option value="c-rich">Copy as rich text</option></select>
-  <button id="tFind" title="Find & replace (⌘F)" aria-label="Find">⌕</button>
-  <button id="gear" aria-label="Settings">⚙</button>
-</header>
-<nav id="tabs" aria-label="Open documents"></nav>
-<div class="wrap">
-  <nav id="tree"></nav>
-  <main><div id="out"><article id="doc" class="vditor-reset"></article></div><div id="editor"></div></main>
+
+  <aside id="settings" class="side" aria-label="Settings">
+    <div class="side-head">
+      <h2>Appearance &amp; settings</h2>
+      <button id="closeSettings" class="icon" title="Close" aria-label="Close settings"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="scroll">
+      <h3>Theme</h3>
+      <div class="swatches" role="radiogroup" aria-label="Theme">
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value=""><span class="thumb sys"></span>Auto</label>
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value="light"><span class="thumb" style="--t-bg:#fff;--t-panel:#f7f7f8;--t-fg:#1f2328;--t-mute:#c8cbd0;--t-accent:#0969da"></span>Light</label>
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value="dark"><span class="thumb" style="--t-bg:#1d2125;--t-panel:#171a1d;--t-fg:#d1d5da;--t-mute:#4a525b;--t-accent:#4493f8"></span>Dark</label>
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value="material"><span class="thumb" style="--t-bg:#263238;--t-panel:#1e282d;--t-fg:#eeffff;--t-mute:#546e7a;--t-accent:#82aaff"></span>Material</label>
+        <label class="sw"><input class="vh" type="radio" name="theme" data-k="theme" value="onedark"><span class="thumb" style="--t-bg:#282c34;--t-panel:#21252b;--t-fg:#abb2bf;--t-mute:#4b5263;--t-accent:#61afef"></span>One Dark</label>
+      </div>
+
+      <h3>Text</h3>
+      <div class="field"><div class="fl">Typeface</div>
+        <div class="seg full" role="radiogroup" aria-label="Typeface">
+          <label><input class="vh" type="radio" name="font" data-k="font" value="-apple-system,system-ui,sans-serif"><span style="font-family:-apple-system,system-ui,sans-serif">Sans</span></label>
+          <label><input class="vh" type="radio" name="font" data-k="font" value="Georgia,'Times New Roman',serif"><span style="font-family:Georgia,serif">Serif</span></label>
+          <label><input class="vh" type="radio" name="font" data-k="font" value="ui-monospace,Menlo,monospace"><span style="font-family:ui-monospace,Menlo,monospace">Mono</span></label>
+        </div></div>
+      <label class="field"><span class="fl">Font size <output></output></span><input type="range" min="12" max="24" data-k="size" data-u="px"></label>
+      <label class="field"><span class="fl">Line height <output></output></span><input type="range" min="1.2" max="2.2" step="0.1" data-k="lh"></label>
+      <label class="field"><span class="fl">Page width <output></output></span><input type="range" min="500" max="1400" step="20" data-k="width" data-u="px"></label>
+
+      <h3>Code</h3>
+      <label class="field"><span class="fl">Code font</span><select data-k="code-font"><option value="ui-monospace,Menlo,monospace">SF Mono / Menlo</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
+      <label class="field"><span class="fl">Code size <output></output></span><input type="range" min="11" max="20" data-k="code-size" data-u="px"></label>
+      <label class="field"><span class="fl">Tab width <output></output></span><input type="range" min="2" max="8" step="2" data-k="tab"></label>
+
+      <h3>Writing</h3>
+      <label class="toggle"><span>Typewriter mode<small>Keep the current line centered</small></span><input type="checkbox" class="switch" data-k="typewriter"></label>
+      <label class="toggle"><span>Focus mode<small>Dim everything but the current block</small></span><input type="checkbox" class="switch" data-k="focus"></label>
+      <label class="toggle"><span>Outline<small>Table of contents beside the editor</small></span><input type="checkbox" class="switch" data-k="outline"></label>
+      <label class="field"><span class="fl">Auto-save</span><select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
+      <label class="field"><span class="fl">Save pasted images to</span><select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
+
+      <h3>PDF export</h3>
+      <div class="field"><div class="fl">Page size</div>
+        <div class="seg full" role="radiogroup" aria-label="Page size">
+          <label><input class="vh" type="radio" name="paper" data-k="paper" value="a4"><span>A4</span></label>
+          <label><input class="vh" type="radio" name="paper" data-k="paper" value="letter"><span>Letter</span></label>
+        </div></div>
+      <label class="field"><span class="fl">Margins <output></output></span><input type="range" min="5" max="40" data-k="margin" data-u="mm"></label>
+      <label class="toggle"><span>Page numbers<small>Title and page number in the header &amp; footer</small></span><input type="checkbox" class="switch" data-k="pagenums"></label>
+
+      <h3>Custom CSS</h3>
+      <textarea data-k="css" rows="5" placeholder="#doc h1 { color: tomato }" aria-label="Custom CSS"></textarea>
+    </div>
+  </aside>
 </div>
-<footer id="stats"></footer>
 
 <div class="menu" id="ctx" role="menu"></div>
 <dialog id="ask"><form method="dialog"><h3></h3><p></p><div class="row"></div></form></dialog>
-
-<div class="pop" id="find">
-  <label>Find<input type="text" id="fq"></label>
-  <label>Replace with<input type="text" id="fr"></label>
-  <label><input type="checkbox" id="fre"> Regular expression</label>
-  <label><input type="checkbox" id="fcase"> Match case</label>
-  <div class="row"><button id="fnext">Find next</button><button id="fall">Replace all</button></div>
-  <p id="fcount" style="font-size:12px;color:var(--mute)"></p>
-</div>
-
-<div class="pop" id="settings">
-  <h4>Appearance</h4>
-  <label>Theme<select data-k="theme"><option value="">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="material">Material Dark</option><option value="onedark">One Dark</option></select></label>
-  <label>Font<select data-k="font"><option value="-apple-system,system-ui,sans-serif">Sans</option><option value="Georgia,'Times New Roman',serif">Serif</option><option value="ui-monospace,Menlo,monospace">Mono</option></select></label>
-  <label>Font size <span></span><input type="range" min="12" max="24" data-k="size" data-u="px"></label>
-  <label>Line height <span></span><input type="range" min="1.2" max="2.2" step="0.1" data-k="lh"></label>
-  <label>Page width <span></span><input type="range" min="500" max="1400" step="20" data-k="width" data-u="px"></label>
-  <label>Code font<select data-k="code-font"><option value="ui-monospace,Menlo,monospace">SF Mono / Menlo</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
-  <label>Code size <span></span><input type="range" min="11" max="20" data-k="code-size" data-u="px"></label>
-  <label>Tab width <span></span><input type="range" min="2" max="8" step="2" data-k="tab"></label>
-  <label>Custom CSS<textarea data-k="css" rows="4" placeholder="#doc h1 { color: tomato }"></textarea></label>
-  <h4>Writing</h4>
-  <label><input type="checkbox" data-k="typewriter"> Typewriter mode: keep the current line centered</label>
-  <label><input type="checkbox" data-k="focus"> Focus mode: dim everything but the current block</label>
-  <label><input type="checkbox" data-k="outline"> Outline (table of contents) sidebar</label>
-  <label>Auto-save<select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
-  <label>Save pasted images to<select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
-  <h4>PDF</h4>
-  <label>Page size<select data-k="paper"><option value="a4">A4</option><option value="letter">Letter</option></select></label>
-  <label>Margins <span></span><input type="range" min="5" max="40" data-k="margin" data-u="mm"></label>
-  <label><input type="checkbox" data-k="pagenums"> Page numbers (header &amp; footer)</label>
-</div>
 <div id="drop"></div>
 <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
 <script>
@@ -147,11 +330,14 @@ const QL = window.QL_MODE === true;  // set by the Quick Look extension
 const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
 const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
 const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
-const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0'};
+const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', font: '-apple-system,system-ui,sans-serif', paper: 'a4'};
 const opt = k => store.get('set-' + k) ?? String(DEFAULTS[k] ?? '');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const themeName = () => opt('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 const dark = () => themeName() !== 'light';
+const icon = d => `<svg class="i" viewBox="0 0 24 24">${d}</svg>`;
+const ICON = {x: '<path d="M18 6 6 18M6 6l12 12"/>', plus: '<path d="M12 5v14M5 12h14"/>', chev: '<path d="m9 18 6-6-6-6"/>',
+  file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>'};
 
 // ---- tab state: every open document is a tab {name, path, base, value, dirty, handle} ----
 let tabs = [], active = 0, editor = null, editorTab = null, ready = false, mode = 'read';
@@ -166,8 +352,13 @@ const hljs = () => ({style: dark() ? 'native' : 'github', lineNumber: true});
 
 // ---- View mode ----
 function renderView(){
+  document.body.classList.toggle('empty', !QL && !T().value.trim());
   return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hljs(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
 }
+$('#empty').addEventListener('click', e => {
+  const go = e.target.closest('[data-go]')?.dataset.go;
+  if (go === 'edit') setMode('edit'); else if (go === 'open') $('#open').click();
+});
 
 // ---- Edit (inline WYSIWYG) and Source (raw markdown) modes ----
 const blocks = [ // slash menu for people new to markdown
@@ -245,9 +436,9 @@ async function setMode(m){
   mode = m;
   for (const c of ['read', 'edit', 'source']) document.body.classList.toggle(c, c === m);
   document.body.classList.toggle('ql', QL);
-  $('#mRead').classList.toggle('on', m === 'read');
-  $('#mEdit').classList.toggle('on', m === 'edit');
-  $('#mSource').classList.toggle('on', m === 'source');
+  for (const [id, k] of [['#mRead', 'read'], ['#mEdit', 'edit'], ['#mSource', 'source']]) {
+    $(id).classList.toggle('on', m === k); $(id).setAttribute('aria-pressed', m === k);
+  }
   if (m === 'read') { editorTab = null; await renderView(); } else createEditor(m === 'edit' ? 'ir' : 'sv');
 }
 $('#mRead').onclick = () => setMode('read');
@@ -327,18 +518,18 @@ function renameTab(t){
 function renderTabs(){
   $('#tabs').innerHTML = tabs.map((t, i) =>
     `<div class="tab${i === active ? ' cur' : ''}${t.dirty ? ' dirty' : ''}" draggable="true" data-i="${i}" title="${esc(t.path || t.name)}" role="tab" aria-selected="${i === active}">` +
-    `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">×</button></div>`).join('') +
-    `<button id="newTab" title="New tab (⌘T)" aria-label="New tab">+</button>`;
+    `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">${icon(ICON.x)}</button></div>`).join('') +
+    `<button id="newTab" class="icon" title="New tab (⌘T)" aria-label="New tab">${icon(ICON.plus)}</button>`;
   $('#tabs .cur')?.scrollIntoView({block: 'nearest', inline: 'nearest'});
 }
 // title bar, dirty dot, session restore: the host keeps what it needs from this one message
 function syncChrome(){
-  renderTabs(); stats(); markTree();
+  renderTabs(); stats(); saveState(); markTree();
   if (native && !QL) native.postMessage({cmd: 'state', title: T().name, path: T().path, dirty: tabs.some(t => t.dirty), paths: tabs.map(t => t.path).filter(Boolean)});
 }
 const tabsEl = $('#tabs');
 tabsEl.addEventListener('click', e => {
-  if (e.target.id === 'newTab') return newTab();
+  if (e.target.closest('#newTab')) return newTab();
   const x = e.target.closest('[data-close]'); if (x) return closeTab(+x.dataset.close);
   const el = e.target.closest('.tab');
   if (el && +el.dataset.i !== active && !e.target.closest('input')) switchTo(+el.dataset.i);
@@ -356,6 +547,7 @@ tabsEl.addEventListener('contextmenu', e => {
   showMenu(e.clientX, e.clientY, [
     ['Rename…', () => renameTab(t)],
     native && ['Move to New Window', () => moveToWindow(t)],
+    '-',
     ['Close', () => closeTab(tabs.indexOf(t))],
     ['Close Others', async () => { for (const o of tabs.filter(o => o !== t)) if (!(await closeTab(tabs.indexOf(o)))) break; }],
   ]);
@@ -381,16 +573,33 @@ tabsEl.addEventListener('dragend', e => {
   if (dragFrom >= 0 && native && outside && e.dataTransfer.dropEffect === 'none') moveToWindow(tabs[dragFrom]);
   dragFrom = -1;
 });
-function showMenu(x, y, items){
+
+// ---- menus: items are [label, action], '-' for a separator, or a plain string for a section heading ----
+function showMenu(x, y, items, {right = false, focus = false} = {}){
   const m = $('#ctx'); m.innerHTML = '';
   for (const it of items.filter(Boolean)) {
+    if (typeof it === 'string') {
+      const el = document.createElement(it === '-' ? 'hr' : 'div');
+      if (it !== '-') { el.className = 'mh'; el.textContent = it; }
+      m.append(el); continue;
+    }
     const b = document.createElement('button'); b.textContent = it[0]; b.setAttribute('role', 'menuitem');
-    b.onclick = () => { m.style.display = 'none'; it[1](); };
+    b.onclick = () => { hideMenu(); it[1](); };
     m.append(b);
   }
-  Object.assign(m.style, {display: 'block', left: Math.min(x, innerWidth - 200) + 'px', top: Math.min(y, innerHeight - m.offsetHeight - 8) + 'px'});
+  m.style.display = 'block';
+  const w = m.offsetWidth, h = m.offsetHeight;
+  Object.assign(m.style, {left: Math.max(8, Math.min(right ? x - w : x, innerWidth - w - 8)) + 'px', top: Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px'});
+  if (focus) m.querySelector('button')?.focus();
 }
-addEventListener('mousedown', e => { if (!e.target.closest('#ctx')) $('#ctx').style.display = 'none'; });
+function hideMenu(){ $('#ctx').style.display = 'none'; $('#export').setAttribute('aria-expanded', 'false'); }
+$('#ctx').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  const bs = [...$('#ctx').querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+  bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus();
+});
+addEventListener('mousedown', e => { if (!e.target.closest('#ctx, #export')) hideMenu(); });
 
 // in-page dialog (same look on every platform); resolves to the clicked button's index, Esc = last button
 function ask(title, msg, buttons){
@@ -404,13 +613,21 @@ function ask(title, msg, buttons){
   });
 }
 
-// ---- word counter ----
+// ---- status bar: save state on the left, word counter on the right ----
 function stats(){
   const v = T().value, t = v.replace(/```[\s\S]*?```/g, ' ');
   const words = (t.match(/[\p{L}\p{N}'’-]+/gu) || []).length;
   const paras = v.split(/\n\s*\n/).filter(s => s.trim()).length;
   $('#stats').textContent = `${words.toLocaleString()} words · ${v.length.toLocaleString()} characters · ${paras} paragraphs`;
 }
+function saveState(){
+  const t = T(), el = $('#saveState');
+  el.classList.toggle('dirty', t.dirty);
+  el.textContent = t.dirty ? 'Unsaved changes' : t.path;
+  el.title = t.dirty ? 'Save (⌘S)' : t.path;
+  $('#save').classList.toggle('dirty', t.dirty);
+}
+$('#saveState').onclick = () => T().dirty && save();
 
 // ---- open / save ----
 $('#open').onclick = async () => {
@@ -460,32 +677,56 @@ addEventListener('drop', async e => {
 // ---- files sidebar (folder of the current document, or one picked with Open Folder) ----
 async function refreshTree(){
   const el = $('#tree');
+  $('#openFolder').hidden = !native;
   if (!native) { el.innerHTML = '<p class="hint">The files sidebar works in the MDView app.</p>'; return; }
   const t = await native.postMessage({cmd: 'tree', doc: T().path});
+  const cur = T().path;
   const node = n => n.children
-    ? `<details ${n.open ? 'open' : ''}><summary>📁 ${esc(n.name)}</summary>${n.children.map(node).join('')}</details>`
-    : `<a data-path="${esc(n.path)}" title="${esc(n.path)}">${esc(n.name)}</a>`;
-  el.innerHTML = `<div class="row" style="padding:0 4px 8px"><button id="openFolder">Open folder…</button></div>` +
-    (t ? node({...t, open: true}) : '<p class="hint">Open a file or folder to browse it here.</p>');
-  $('#openFolder').onclick = async () => { await native.postMessage({cmd: 'openFolder'}); refreshTree(); };
+    ? `<details${cur.startsWith(n.path + '/') ? ' open' : ''}><summary>${icon(ICON.chev)}<span>${esc(n.name)}</span></summary><div class="kids">${n.children.map(node).join('')}</div></details>`
+    : `<a data-path="${esc(n.path)}" title="${esc(n.path)}">${icon(ICON.file)}<span>${esc(n.name)}</span></a>`;
+  $('#treeTitle').textContent = t ? t.name : 'Files';
+  el.innerHTML = !t ? '<p class="hint">Open a file or folder to browse it here.</p>'
+    : t.children.length ? t.children.map(node).join('') : '<p class="hint">No Markdown files in this folder.</p>';
   markTree();
 }
+$('#openFolder').onclick = async () => { await native.postMessage({cmd: 'openFolder'}); refreshTree(); };
 const refreshTreeIfOpen = () => document.body.classList.contains('tree') && refreshTree();
 function markTree(){ document.querySelectorAll('#tree a').forEach(a => a.classList.toggle('cur', a.dataset.path === T()?.path)); }
 $('#tree').addEventListener('click', e => {
   const a = e.target.closest('a[data-path]');
   if (a) native.postMessage({cmd: 'openPath', path: a.dataset.path}); // opens in a new tab, or switches to it
 });
-function toggleTree(){ const on = document.body.classList.toggle('tree'); store.set('tree', on); if (on) refreshTree(); }
+function toggleTree(){
+  const on = document.body.classList.toggle('tree');
+  store.set('tree', on); $('#tTree').setAttribute('aria-expanded', on);
+  if (on) refreshTree();
+}
 $('#tTree').onclick = toggleTree;
+
+// ---- panels: find bar and settings ----
+function panel(id, open){
+  const el = $(id), btn = $(id === '#find' ? '#tFind' : '#gear');
+  open ??= !el.classList.contains('open');
+  el.classList.toggle('open', open); btn.setAttribute('aria-expanded', open);
+  if (open && id === '#find') { $('#fq').focus(); $('#fq').select(); countMatches(); }
+}
+$('#tFind').onclick = () => panel('#find');
+$('#fclose').onclick = () => panel('#find', false);
+$('#gear').onclick = () => panel('#settings');
+$('#closeSettings').onclick = () => panel('#settings', false);
 
 // ---- find & replace (current document) ----
 function pattern(){
   const q = $('#fq').value; if (!q) return null;
   try { return new RegExp($('#fre').checked ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#fcase').checked ? 'g' : 'gi'); }
-  catch { $('#fcount').textContent = 'Invalid regular expression'; return null; }
+  catch { $('#fcount').textContent = 'Invalid regex'; return null; }
 }
-function countMatches(){ const p = pattern(); $('#fcount').textContent = p ? `${(current().match(p) || []).length} matches in this document` : ''; }
+function countMatches(){
+  $('#fcount').textContent = '';
+  const p = pattern(); if (!p) return;
+  const n = (current().match(p) || []).length;
+  $('#fcount').textContent = n ? `${n} match${n === 1 ? '' : 'es'}` : 'No results';
+}
 ['fq', 'fre', 'fcase'].forEach(id => $('#' + id).addEventListener('input', countMatches));
 $('#fnext').onclick = () => { // highlights the next visible occurrence; regex patterns use the first literal match
   const p = pattern(); if (!p) return;
@@ -499,13 +740,9 @@ $('#fall').onclick = () => {
   if (mode === 'read') renderView(); else editor.setValue(t.value);
   $('#fcount').textContent = `Replaced ${n}`;
 };
-function pop(id){ const el = $(id), open = !el.classList.contains('open'); document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); el.classList.toggle('open', open); if (open && id === '#find') $('#fq').focus(); }
-$('#tFind').onclick = () => pop('#find');
-$('#gear').onclick = () => pop('#settings');
 
 // ---- export & copy (renders the View first so diagrams/math are included) ----
-$('#export').onchange = async e => {
-  const v = e.target.value; e.target.value = '';
+async function exportAs(v){
   commit();
   const t = T(), name = t.name.replace(/\.\w+$/, '');
   if (v === 'md') return download(name + '.md', t.value, 'text/markdown');
@@ -516,11 +753,19 @@ $('#export').onchange = async e => {
   if (v === 'html') {
     let css = '';
     for (const s of document.styleSheets) try { css += [...s.cssRules].map(r => r.cssText).join('\n'); } catch {}
-    download(name + '.html', `<!doctype html><html data-theme="${themeName()}"><meta charset="utf-8"><title>${esc(name)}</title><style>${css}</style><body style="height:auto;display:block;padding:24px 16px"><article id="doc" class="vditor-reset" style="${document.documentElement.style.cssText}">${html}</article>`, 'text/html');
+    download(name + '.html', `<!doctype html><html data-theme="${themeName()}"><meta charset="utf-8"><title>${esc(name)}</title><style>${css}</style><body style="height:auto;display:block;overflow:auto;padding:48px 16px"><article id="doc" class="vditor-reset" style="${document.documentElement.style.cssText}">${html}</article>`, 'text/html');
   }
   if (v === 'c-html') copy({text: html});
   if (v === 'c-text') copy({text: $('#doc').innerText});
   if (v === 'c-rich') copy({html, text: $('#doc').innerText});
+}
+$('#export').onclick = e => {
+  if ($('#export').getAttribute('aria-expanded') === 'true') return hideMenu();
+  const r = e.currentTarget.getBoundingClientRect(), go = v => () => exportAs(v);
+  showMenu(r.right, r.bottom + 6, ['Export', ['HTML…', go('html')], ['PDF…', go('pdf')], ['Markdown…', go('md')],
+    '-', 'Copy as', ['Markdown', go('c-md')], ['Rich text', go('c-rich')], ['HTML', go('c-html')], ['Plain text', go('c-text')]],
+    {right: true, focus: e.detail === 0}); // opened from the keyboard: focus the first item
+  $('#export').setAttribute('aria-expanded', 'true');
 };
 async function copy({html, text}){
   if (native) return native.postMessage({cmd: 'copy', html: html ?? '', text});
@@ -531,12 +776,13 @@ async function copy({html, text}){
 
 // ---- live settings ----
 document.querySelectorAll('#settings [data-k]').forEach(el => {
-  const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox';
-  if (box) el.checked = opt(k) === 'true'; else if (opt(k) !== '') el.value = opt(k);
+  const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox', radio = el.type === 'radio';
+  const out = el.type === 'range' && el.closest('.field')?.querySelector('output');
+  if (box) el.checked = opt(k) === 'true'; else if (radio) el.checked = el.value === opt(k); else if (opt(k) !== '') el.value = opt(k);
   const apply = rerender => {
     const v = box ? String(el.checked) : el.value;
     store.set('set-' + k, v);
-    if (el.previousElementSibling?.tagName === 'SPAN') el.previousElementSibling.textContent = v + u;
+    if (out) out.textContent = v + u;
     if (k === 'theme') document.documentElement.dataset.theme = themeName();
     else if (k === 'css') $('#userCss').textContent = v;
     else if (k === 'focus') document.body.classList.toggle('focus', el.checked);
@@ -544,19 +790,19 @@ document.querySelectorAll('#settings [data-k]').forEach(el => {
     // theme, typewriter and outline are editor options: rebuild. Everything else is CSS and updates instantly.
     if (rerender && ['theme', 'typewriter', 'outline'].includes(k)) setMode(mode);
   };
-  el.addEventListener(box || el.tagName === 'SELECT' ? 'change' : 'input', () => apply(true));
-  apply(false);
+  el.addEventListener(box || radio || el.tagName === 'SELECT' ? 'change' : 'input', () => apply(true));
+  if (!radio || el.checked) apply(false); // a radio group applies once, through its checked option
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!opt('theme')) { document.documentElement.dataset.theme = themeName(); setMode(mode); } });
 
 // ---- shortcuts (⌘ on macOS, Ctrl elsewhere) ----
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); $('#ctx').style.display = 'none'; }
+  if (e.key === 'Escape') { hideMenu(); panel('#find', false); }
   if (e.ctrlKey && e.key === 'Tab') { e.preventDefault(); return switchTo((active + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length); }
   if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
   if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
-  const k = {s: save, o: () => $('#open').click(), f: () => pop('#find'), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active),
-    1: () => setMode('read'), 2: () => setMode('edit'), 3: () => setMode('source')}[e.key];
+  const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active),
+    ',': () => panel('#settings'), 1: () => setMode('read'), 2: () => setMode('edit'), 3: () => setMode('source')}[e.key];
   if (k) { e.preventDefault(); k(); }
 }, true);
 $('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#fnext').click(); });
@@ -568,7 +814,7 @@ You're in **View mode**: select and copy freely, nothing changes.
 - **Edit** (⌘2) edits inline like Typora. Type \`/\` for blocks and \`:\` for emoji.
 - **Source** (⌘3) shows the raw markdown.
 - **Tabs**: ⌘T new tab, ⌘W close, Ctrl+Tab to switch. Double-click a tab to rename the file, drag to reorder, right-click to move it to a new window.
-- ⚙ has themes, typewriter mode, focus mode, auto-save and more. Changes apply live.
+- **Settings** (⌘,) has themes, typewriter mode, focus mode, auto-save and more. Changes apply live.
 
 Math $E = mc^2$, ==highlight==, H~2~O, x^2^, footnotes[^1], and diagrams:
 
