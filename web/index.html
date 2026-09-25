@@ -10,10 +10,11 @@
 /* ---- design tokens: chrome (panel) sits a step away from the document (bg), like a macOS sidebar ---- */
 :root{--bg:#fff;--fg:#1f2328;--mute:#6b7079;--line:#e3e4e8;--panel:#f7f7f8;--hover:#ebebee;--raised:#fff;--accent:#0969da;--accent-soft:#0969da1f;
   --shadow:0 10px 30px #0000001f,0 0 0 1px #0000000d;--ui:-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",sans-serif;
-  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,monospace;--code-size:14px;--tab:4;
+  --font:-apple-system,system-ui,sans-serif;--size:16px;--width:760px;--lh:1.6;--code-font:ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;--code-size:14px;--tab:4;
   --gutter:clamp(16px,5vw,40px);accent-color:var(--accent)}
 :root[data-theme=dark]{--bg:#1d2125;--fg:#d1d5da;--mute:#8b949e;--line:#30363d;--panel:#171a1d;--hover:#2a2f35;--raised:#353b43;--accent:#4493f8;--accent-soft:#4493f833;--shadow:0 10px 30px #00000073,0 0 0 1px #ffffff14}
 *{box-sizing:border-box}
+[data-os=win] *{scrollbar-width:thin} /* Windows draws wide classic scrollbars by default */
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 var(--ui);-webkit-font-smoothing:antialiased;overflow:hidden}
 svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -327,7 +328,7 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
         <div class="seg full" role="radiogroup" aria-label="Typeface">
           <label><input class="vh" type="radio" name="font" data-k="font" value="-apple-system,system-ui,sans-serif"><span style="font-family:-apple-system,system-ui,sans-serif">Sans</span></label>
           <label><input class="vh" type="radio" name="font" data-k="font" value="Georgia,'Times New Roman',serif"><span style="font-family:Georgia,serif">Serif</span></label>
-          <label><input class="vh" type="radio" name="font" data-k="font" value="ui-monospace,Menlo,monospace"><span style="font-family:ui-monospace,Menlo,monospace">Mono</span></label>
+          <label><input class="vh" type="radio" name="font" data-k="font" value='ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace'><span style='font-family:ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace'>Mono</span></label>
         </div></div>
       <label class="field"><span class="fl">Font size <output></output></span><input type="range" min="12" max="24" data-k="size" data-u="px"></label>
       <label class="field"><span class="fl">Line height <output></output></span><input type="range" min="1.2" max="2.2" step="0.1" data-k="lh"></label>
@@ -345,7 +346,7 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
         <label class="sw"><input class="vh" type="radio" name="codecolors" data-k="code-colors" value="vscode"><span class="thumb" style="--t-bg:#1e1e1e;--t-panel:#1e1e1e;--t-fg:#d4d4d4;--t-mute:#d4d4d48c;--t-accent:#569cd6"></span>VS Code</label>
         <label class="sw"><input class="vh" type="radio" name="codecolors" data-k="code-colors" value="red"><span class="thumb" style="--t-bg:#f7f6f3;--t-panel:#f7f6f3;--t-fg:#37352f;--t-mute:#37352f8c;--t-accent:#eb5757"></span>Red Accent</label>
       </div></div>
-      <label class="field"><span class="fl">Code font</span><select data-k="code-font"><option value="ui-monospace,Menlo,monospace">SF Mono / Menlo</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
+      <label class="field"><span class="fl">Code font</span><select data-k="code-font"><option value='ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace'>System mono</option><option value="'JetBrains Mono','Fira Code',Menlo,monospace">JetBrains Mono / Fira Code</option><option value="Courier,monospace">Courier</option></select></label>
       <label class="field"><span class="fl">Code size <output></output></span><input type="range" min="11" max="20" data-k="code-size" data-u="px"></label>
       <label class="field"><span class="fl">Tab width <output></output></span><input type="range" min="2" max="8" step="2" data-k="tab"></label>
 
@@ -378,9 +379,18 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
 <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
 <script>
 const $ = s => document.querySelector(s);
-// The page is the whole app; the host shell (MDView.app today) only answers `native.postMessage({cmd, ...})`
+// The page is the whole app; the host shell (macOS app, Tauri or Electron) only answers `native.postMessage({cmd, ...})`
 // for things a web page can't do: files, dialogs, clipboard, printing, windows. Keep it that way for portability.
-const native = window.webkit?.messageHandlers?.native;
+// Every shell replies with a promise.
+const native = window.webkit?.messageHandlers?.native                                 // macOS app (WKWebView)
+  || window.mdviewHost                                                                  // Electron: preload exposes {postMessage}
+  || (window.__TAURI__ && {postMessage: msg => window.__TAURI__.core.invoke('native', {msg})}); // Tauri: one `native` command
+const OS = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : /Win/.test(navigator.platform) ? 'win' : 'linux';
+document.documentElement.dataset.os = OS;
+// Shortcuts are written Mac-style (⌥⇧⌘O) everywhere in the page; elsewhere they read Ctrl+Alt+Shift+O.
+const keyLabel = k => OS === 'mac' ? k : ['⌘Ctrl', '⌥Alt', '⇧Shift'].filter(m => k.includes(m[0])).map(m => m.slice(1) + '+').join('') + k.replace(/[⌥⇧⌘]/g, '');
+const keyText = s => s.replace(/[⌥⇧⌘]+./g, keyLabel);
+if (OS !== 'mac') for (const el of document.querySelectorAll('[title],kbd')) el.title ? el.title = keyText(el.title) : el.textContent = keyText(el.textContent);
 const QL = window.QL_MODE === true;  // set by the Quick Look extension
 const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
 const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
@@ -864,7 +874,7 @@ function renderTabs(){
   $('#tabs').innerHTML = tabs.map((t, i) =>
     `<div class="tab${i === active ? ' cur' : ''}${t.dirty ? ' dirty' : ''}" draggable="true" data-i="${i}" title="${esc(t.path || t.name)}" role="tab" aria-selected="${i === active}">` +
     `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">${icon(ICON.x)}</button></div>`).join('') +
-    `<button id="newTab" class="icon" title="New tab (⌘T)" aria-label="New tab">${icon(ICON.plus)}</button>`;
+    `<button id="newTab" class="icon" title="${keyText('New tab (⌘T)')}" aria-label="New tab">${icon(ICON.plus)}</button>`;
   $('#tabs .cur')?.scrollIntoView({block: 'nearest', inline: 'nearest'});
 }
 // title bar, dirty dot, session restore: the host keeps what it needs from this one message
@@ -931,7 +941,7 @@ function fillMenu(m, items){
     const [label, action, o = {}] = it, b = document.createElement('button');
     b.setAttribute('role', 'menuitem'); if (o.danger) b.className = 'danger';
     b.innerHTML = (o.icon ? `<span class="mi">${o.icon.startsWith('<') ? icon(o.icon) : esc(o.icon)}</span>` : '') +
-      `<span class="ml">${esc(label)}</span>` + (o.key ? `<kbd>${o.key}</kbd>` : '') + (o.sub ? `<span class="mc">${icon(ICON.chev)}</span>` : '') +
+      `<span class="ml">${esc(label)}</span>` + (o.key ? `<kbd>${keyLabel(o.key)}</kbd>` : '') + (o.sub ? `<span class="mc">${icon(ICON.chev)}</span>` : '') +
       (o.check ? `<span class="mc">${icon(ICON.check).replace('class="i"', 'class="i ck"')}</span>` : '');
     if (o.sub) { b.setAttribute('aria-haspopup', 'menu'); b.onclick = b.onmouseenter = () => openSub(b, o.sub); }
     else {
@@ -989,7 +999,7 @@ function stats(){
 }
 function saveState(){
   const t = T(), el = $('#saveState');
-  el.classList.toggle('dirty', t.dirty); el.title = 'Save (⌘S)';
+  el.classList.toggle('dirty', t.dirty); el.title = keyText('Save (⌘S)');
   $('#path').textContent = t.path;
   $('#save').classList.toggle('dirty', t.dirty);
 }
@@ -1129,6 +1139,8 @@ async function copy({html, text}){
 }
 
 // ---- live settings ----
+for (const k of ['font', 'code-font']) if (store.get('set-' + k) === 'ui-monospace,Menlo,monospace') // pre-Windows mono stack
+  store.set('set-' + k, 'ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace');
 document.querySelectorAll('#settings [data-k]').forEach(el => {
   const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox', radio = el.type === 'radio';
   const out = el.type === 'range' && el.closest('.field')?.querySelector('output');
@@ -1152,6 +1164,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if
 
 // ---- shortcuts (⌘ on macOS, Ctrl elsewhere) ----
 addEventListener('keydown', e => {
+  const mod = OS === 'mac' ? e.metaKey : e.ctrlKey; // Ctrl+F/O/T on a Mac are text-editing keys, leave them alone
   if (slash && !slash.list.length && e.key !== 'Backspace') closeSlash(); // nothing matches: let keys through
   if (slash) {
     const d = {ArrowDown: 1, ArrowUp: -1}[e.key];
@@ -1162,20 +1175,21 @@ addEventListener('keydown', e => {
   }
   if (e.key === 'Escape') { hideMenu(); panel('#find', false); }
   if (e.ctrlKey && e.key === 'Tab') { e.preventDefault(); return switchTo((active + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length); }
-  if (mode === 'edit' && (e.metaKey || e.ctrlKey) && (e.shiftKey || e.altKey)) {
+  if (OS !== 'mac' && e.getModifierState('AltGraph')) return; // AltGr arrives as Ctrl+Alt: it's typing @, €, { …, not a shortcut
+  if (mode === 'edit' && mod && (e.shiftKey || e.altKey)) {
     const [f, texty] = BLOCK_KEYS[(e.altKey ? '⌥' : '') + (e.shiftKey ? '⇧' : '') + '⌘' + e.code.replace(/^(Key|Digit)/, '')] || [];
     const el = f && activeBlock();
     if (el && (!texty || TEXTY.test(el.tagName))) { e.preventDefault(); e.stopPropagation(); return f(el); }
   }
-  if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+  if (!mod || e.altKey) return;
   if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
-  const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active),
+  const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active), n: () => native?.postMessage({cmd: 'newWindow'}),
     ',': () => panel('#settings'), 1: () => setMode('read'), 2: () => setMode('edit'), 3: toggleSource}[e.key];
   if (k) { e.preventDefault(); k(); }
 }, true);
 $('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#fnext').click(); });
 
-const WELCOME = `# Welcome to MDView
+const WELCOME = keyText(`# Welcome to MDView
 
 You're in **View mode**: select and copy freely, nothing changes.
 
@@ -1193,7 +1207,7 @@ graph LR
 \`\`\`
 
 [^1]: Like this one.
-`;
+`);
 newTab(QL || FRESH ? {} : {name: 'Welcome.md', value: WELCOME});
 if (!QL && store.get('tree') === 'true') toggleTree();
 </script>
