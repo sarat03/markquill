@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MDView</title>
+<title>MarkQuill</title>
 <link rel="stylesheet" href="vditor/dist/index.css">
 <script src="vditor/dist/index.min.js"></script>
 <style>
@@ -379,11 +379,10 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
 <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
 <script>
 const $ = s => document.querySelector(s);
-// The page is the whole app; the host shell (macOS app, Tauri or Electron) only answers `native.postMessage({cmd, ...})`
+// The page is the whole app; the host shell (the Tauri app, or the macOS Swift app) only answers `native.postMessage({cmd, ...})`
 // for things a web page can't do: files, dialogs, clipboard, printing, windows. Keep it that way for portability.
 // Every shell replies with a promise.
 const native = window.webkit?.messageHandlers?.native                                 // macOS app (WKWebView)
-  || window.mdviewHost                                                                  // Electron: preload exposes {postMessage}
   || (window.__TAURI__ && {postMessage: msg => window.__TAURI__.core.invoke('native', {msg})}); // Tauri: one `native` command
 const OS = /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : /Win/.test(navigator.platform) ? 'win' : 'linux';
 document.documentElement.dataset.os = OS;
@@ -619,7 +618,7 @@ function rerender(v, i){
   }
   block = el; placeBlockBtn();
 }
-const TOKEN = 'MDVIEWBLOCKTOKEN';
+const TOKEN = 'MARKQUILLBLOCKTOKEN';
 // replace block el with markdown md ('' deletes it); the rest of the document is re-read untouched
 function rewriteBlock(el, fn, focus){
   const i = [...el.parentNode.children].indexOf(el), lute = editor.vditor.lute;
@@ -627,7 +626,7 @@ function rewriteBlock(el, fn, focus){
   const p = document.createElement('p'); p.dataset.block = '0'; p.textContent = TOKEN;
   el.replaceWith(p);
   const v = editor.getValue();
-  rerender(md ? v.replace(TOKEN, () => md) : v.replace(/\n*MDVIEWBLOCKTOKEN\n*/, '\n\n').replace(/^\n+/, ''), i + focus);
+  rerender(md ? v.replace(TOKEN, () => md) : v.replace(/\n*MARKQUILLBLOCKTOKEN\n*/, '\n\n').replace(/^\n+/, ''), i + focus);
 }
 const TURN = [['Paragraph', '', ICON.para, '⌥⌘0'], ...[1, 2, 3, 4, 5, 6].map(n => ['Heading ' + n, '#'.repeat(n) + ' ', 'H' + n, '⌥⌘' + n]),
   ['Quote', '> ', ICON.quote, '⌥⌘Q'], ['Ordered List', '1. ', ICON.ol, '⌥⇧⌘O'], ['Bullet List', '- ', ICON.ul, '⌥⇧⌘U'], ['Task List', '- [ ] ', ICON.task, '⌥⇧⌘X']];
@@ -663,7 +662,7 @@ let dragBlock = null, dropBefore = null;
 $('#blockBtn').addEventListener('dragstart', e => {
   if (!block?.isConnected) return e.preventDefault();
   dragBlock = block; hideMenu();
-  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('application/x-mdview-block', '');
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('application/x-markquill-block', '');
   e.dataTransfer.setDragImage(block, 0, 0);
   setTimeout(() => dragBlock?.classList.add('dragging'));
 });
@@ -765,7 +764,7 @@ $('#slash').addEventListener('click', e => { if (e.target.closest('button')) pic
 // ---- Assets: pasted / dropped / uploaded images go next to the document ----
 // ---- Attachments: pasted / dropped / attached files are copied next to the document; images embed, other files link ----
 async function saveAssets(files){
-  if (!native) return 'Attachments work in the MDView app.';
+  if (!native) return 'Attachments work in the MarkQuill app.';
   const lines = [];
   for (const f of files) {
     const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(f); });
@@ -1036,7 +1035,7 @@ async function saveTab(t = T()){
 const save = () => saveTab();
 // used by the host before closing a window / quitting
 async function saveAll(){ for (const t of tabs.filter(t => t.dirty)) if (!(await saveTab(t))) return false; return true; }
-// Tauri/Electron ask here before closing a window with unsaved tabs (the macOS app uses a native alert)
+// Tauri asks here before closing a window with unsaved tabs (the macOS app uses a native alert)
 async function confirmClose(){
   const r = await ask('Save changes before closing?', 'Some documents in this window have unsaved changes.', ['Save All', "Don't Save", 'Cancel']);
   return r === 1 || (r === 0 && await saveAll());
@@ -1194,7 +1193,7 @@ addEventListener('keydown', e => {
 }, true);
 $('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#fnext').click(); });
 
-const WELCOME = keyText(`# Welcome to MDView
+const WELCOME = keyText(`# Welcome to MarkQuill
 
 You're in **View mode**: select and copy freely, nothing changes.
 

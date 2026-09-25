@@ -31,7 +31,7 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         web.uiDelegate = self // without it WKWebView ignores <input type=file> (the attach button)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed // tabs are drawn by the page
-        window.title = "MDView"
+        window.title = "MarkQuill"
         window.contentView = web
         window.delegate = self
         let dir = Bundle.main.resourceURL!.appendingPathComponent("web")
@@ -73,7 +73,7 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         func s(_ k: String) -> String { b[k] as? String ?? "" }
         switch cmd {
         case "state":
-            window.title = s("title").isEmpty ? "MDView" : s("title")
+            window.title = s("title").isEmpty ? "MarkQuill" : s("title")
             window.representedURL = s("path").isEmpty ? nil : URL(fileURLWithPath: s("path"))
             dirty = b["dirty"] as? Bool ?? false
             window.isDocumentEdited = dirty
@@ -239,8 +239,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         func item(_ t: String, _ a: Selector, _ k: String = "", _ mods: NSEvent.ModifierFlags = .command) -> NSMenuItem {
             let i = NSMenuItem(title: t, action: a, keyEquivalent: k); i.keyEquivalentModifierMask = mods; return i
         }
-        sub("MDView", [item("Hide MDView", #selector(NSApplication.hide(_:)), "h"),
-                       item("Quit MDView", #selector(NSApplication.terminate(_:)), "q")])
+        sub("MarkQuill", [item("Hide MarkQuill", #selector(NSApplication.hide(_:)), "h"),
+                       item("Quit MarkQuill", #selector(NSApplication.terminate(_:)), "q")])
         sub("File", [item("New Tab", #selector(newTab(_:))),
                      item("New Window", #selector(newWindow(_:)), "n"),
                      .separator(),

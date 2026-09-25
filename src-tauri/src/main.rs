@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-// Tauri host for Windows and Linux (also runs on macOS). Same contract as App/main.swift: the app lives in
+// Tauri host for Windows and Linux (also runs on macOS). Same contract as macos/App/main.swift: the app lives in
 // web/index.html and this file only answers the page's `native.postMessage({cmd, ...})`, which arrives here as
 // the single `native` command, for what a web page can't do: files, dialogs, clipboard, printing and windows.
 
@@ -39,7 +39,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
     match s("cmd").as_str() {
         "state" => {
             let dirty = msg["dirty"].as_bool().unwrap_or(false);
-            let title = if s("title").is_empty() { "MDView".into() } else { s("title") };
+            let title = if s("title").is_empty() { "MarkQuill".into() } else { s("title") };
             let _ = w.set_title(&format!("{title}{}", if dirty { " •" } else { "" }));
             if let Some(win) = st(app).wins.get_mut(w.label()) {
                 win.dirty = dirty;
@@ -98,7 +98,7 @@ fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
         l
     };
     WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
-        .title("MDView")
+        .title("MarkQuill")
         .inner_size(1100.0, 760.0)
         // later windows start with an empty tab instead of the welcome page
         .initialization_script(if fresh { "window.FRESH = true" } else { "" })
@@ -205,7 +205,7 @@ fn write(w: &WebviewWindow, text: &str, p: &Path) -> bool {
     let format = st(w.app_handle()).formats.get(&*p.to_string_lossy()).copied().unwrap_or_default();
     let out = encode(text, format);
     // write a sibling temp file, then swap it in: a failed write never leaves a half-written document
-    let tmp = p.with_file_name(format!(".{}.mdview-tmp", p.file_name().unwrap_or_default().to_string_lossy()));
+    let tmp = p.with_file_name(format!(".{}.markquill-tmp", p.file_name().unwrap_or_default().to_string_lossy()));
     match fs::write(&tmp, out).and_then(|_| fs::rename(&tmp, p)) {
         Ok(_) => true,
         Err(e) => { let _ = fs::remove_file(&tmp); alert(w, &e.to_string()); false }
@@ -272,7 +272,7 @@ fn save_asset(doc: &str, name: &str, b64: &str, folder: &str) -> Value {
 
 fn main() {
     tauri::Builder::default()
-        // must be first: a second launch (Explorer double-click, `mdview file.md`) hands its files to this one
+        // must be first: a second launch (Explorer double-click, `markquill file.md`) hands its files to this one
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             let files: Vec<PathBuf> = argv.iter().skip(1).map(|a| Path::new(&cwd).join(a)).filter(|p| p.is_file()).collect();
             if files.is_empty() {
@@ -330,7 +330,7 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("couldn't start MDView")
+        .expect("couldn't start MarkQuill")
         .run(|app, ev| match ev {
             RunEvent::ExitRequested { api, .. } => {
                 let dirty: Vec<String> = {
@@ -372,7 +372,12 @@ mod tests {
 
     #[test]
     fn asset_urls_are_loadable() {
-        let u = asset_url(Path::new("/Users/me/My Notes"));
-        assert!(u.ends_with("%2FUsers%2Fme%2FMy%20Notes%2F"), "{u}");
+        // the folder gets the OS's own separator; Windows serves assets over http://asset.localhost
+        let (dir, url) = if cfg!(windows) {
+            (r"C:\Users\me\My Notes", "http://asset.localhost/C%3A%5CUsers%5Cme%5CMy%20Notes%5C")
+        } else {
+            ("/Users/me/My Notes", "asset://localhost/%2FUsers%2Fme%2FMy%20Notes%2F")
+        };
+        assert_eq!(asset_url(Path::new(dir)), url);
     }
 }

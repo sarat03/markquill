@@ -1,9 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MDView",
+  "productName": "MarkQuill",
   "version": "0.1.0",
-  "identifier": "dev.mdview.app",
-  "build": { "frontendDist": "../../../web" },
+  "identifier": "dev.markquill.app",
+  "build": { "frontendDist": "../web" },
   "app": {
     "withGlobalTauri": true,
     "windows": [],
