@@ -7,7 +7,7 @@ import WebKit
 // files, native dialogs, clipboard, printing and windows. A Windows/Linux shell implements the same commands.
 
 // One window = one page = its own set of tabs.
-final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
+final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WKNavigationDelegate, WKUIDelegate {
     let window: NSWindow
     let web: WKWebView
     unowned let app: AppDelegate
@@ -28,6 +28,7 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         super.init()
         cfg.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "native")
         web.navigationDelegate = self
+        web.uiDelegate = self // without it WKWebView ignores <input type=file> (the attach button)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed // tabs are drawn by the page
         window.title = "MDView"
@@ -42,6 +43,14 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         ready = true
         queued.forEach { call("load", $0) }
         queued = []
+    }
+
+    // the page's file picker (Attach image or file)
+    func webView(_ w: WKWebView, runOpenPanelWith p: WKOpenPanelParameters, initiatedByFrame f: WKFrameInfo, completionHandler done: @escaping ([URL]?) -> Void) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = p.allowsMultipleSelection
+        panel.canChooseDirectories = false
+        panel.beginSheetModal(for: window) { done($0 == .OK ? panel.urls : nil) }
     }
 
     func load(_ args: [Any]) { if ready { call("load", args) } else { queued.append(args) } }
@@ -75,16 +84,6 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
             p.allowsMultipleSelection = true
             p.allowedContentTypes = [UTType("net.daringfireball.markdown") ?? .plainText, .plainText]
             if p.runModal() == .OK { p.urls.forEach(openFile) }
-        case "openPath":
-            let u = URL(fileURLWithPath: s("path"))
-            if isMarkdown(u) { openFile(u) }
-        case "openFolder":
-            let p = NSOpenPanel()
-            p.canChooseDirectories = true; p.canChooseFiles = false
-            if p.runModal() == .OK { app.treeRoot = p.url }
-        case "tree":
-            let root = app.treeRoot ?? (s("doc").isEmpty ? nil : URL(fileURLWithPath: s("doc")).deletingLastPathComponent())
-            return reply(root.flatMap { tree($0, depth: 0) }, nil)
         case "save": // path given: write it. No path: ask where, reply with the new identity.
             if !s("path").isEmpty { return reply(write(s("data"), to: URL(fileURLWithPath: s("path"))), nil) }
             if let u = savePanel(s("name")), write(s("data"), to: u) { return reply(info(u), nil) }
@@ -158,10 +157,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var docs: [Doc] = []
     var pendingURLs: [URL] = []
     var launched = false
-    var treeRoot: URL? {
-        get { UserDefaults.standard.string(forKey: "treeRoot").map { URL(fileURLWithPath: $0) } }
-        set { UserDefaults.standard.set(newValue?.path, forKey: "treeRoot") }
-    }
     var keyDoc: Doc? { docs.first { $0.window.isKeyWindow } ?? docs.first { $0.window.isMainWindow } ?? docs.last }
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -271,7 +266,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 // ---- file helpers (stateless: every command carries the path it's about) ----
 func baseDir(_ url: URL) -> String { url.deletingLastPathComponent().absoluteString }
 func info(_ u: URL) -> [String: String] { ["path": u.path, "name": u.lastPathComponent, "base": baseDir(u)] }
-func isMarkdown(_ u: URL) -> Bool { ["md", "markdown", "mdown", "txt"].contains(u.pathExtension.lowercased()) }
 
 func rename(_ path: String, to name: String) -> [String: String] {
     guard !path.isEmpty else { return ["error": "This document hasn't been saved yet."] }
@@ -286,25 +280,9 @@ func rename(_ path: String, to name: String) -> [String: String] {
     catch { return ["error": error.localizedDescription] }
 }
 
-// Markdown files under a folder, skipping hidden dirs and dependency folders.
-func tree(_ dir: URL, depth: Int) -> [String: Any]? {
-    // ponytail: depth 5 / 300 entries per folder keeps huge folders fast; lazy-load on expand if it ever matters
-    guard depth < 5, let items = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else { return nil }
-    var kids: [[String: Any]] = []
-    for u in items.sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }).prefix(300) {
-        if (try? u.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-            if ["node_modules", "build", "dist", "Library"].contains(u.lastPathComponent) { continue }
-            if let t = tree(u, depth: depth + 1) { kids.append(t) }
-        } else if isMarkdown(u) {
-            kids.append(["name": u.lastPathComponent, "path": u.path])
-        }
-    }
-    return depth > 0 && kids.isEmpty ? nil : ["name": dir.lastPathComponent, "path": dir.path, "children": kids]
-}
-
 // Images go into <doc folder>/assets/ (or images/), never overwriting; returns a relative link for the markdown.
 func saveAsset(doc: String, name: String, base64: String, folder: String) -> [String: String] {
-    guard !doc.isEmpty else { return ["error": "Save the document first, then images go into its \(folder) folder."] }
+    guard !doc.isEmpty else { return ["error": "Save the document first: attachments are copied into its \(folder) folder."] }
     guard let data = Data(base64Encoded: base64) else { return ["error": "Couldn't read that image."] }
     let dir = URL(fileURLWithPath: doc).deletingLastPathComponent().appendingPathComponent(folder)
     let clean = name.replacingOccurrences(of: "[^A-Za-z0-9._-]", with: "-", options: .regularExpression)
