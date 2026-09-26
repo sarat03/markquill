@@ -17,12 +17,42 @@ MarkQuill opens `.md` files in a clean reading view and lets you edit them inlin
 
 ## Download
 
-Get the latest installer from [Releases](https://github.com/sarat03/markquill/releases):
+**macOS** ([Homebrew](https://brew.sh)):
+
+```bash
+brew tap sarat03/markquill https://github.com/sarat03/markquill
+```
+
+```bash
+brew install --cask markquill
+```
+
+**Windows** (winget):
+
+```bash
+winget install Sarat.MarkQuill
+```
+
+**Linux**, Debian, Ubuntu or Mint:
+
+```bash
+curl -fL "$(curl -s https://api.github.com/repos/sarat03/markquill/releases/latest | grep -o 'https://[^"]*_amd64\.deb')" -o /tmp/markquill.deb && sudo apt install /tmp/markquill.deb
+```
+
+**Linux**, Fedora:
+
+```bash
+sudo dnf install "$(curl -s https://api.github.com/repos/sarat03/markquill/releases/latest | grep -o 'https://[^"]*x86_64\.rpm')"
+```
+
+Or get the installer from [Releases](https://github.com/sarat03/markquill/releases):
 
 | OS | File |
 |---|---|
-| macOS (Apple silicon / Intel) | `MarkQuill_x.y.z_aarch64.dmg` / `MarkQuill_x.y.z_x64.dmg` |
-| Windows 10/11 | `MarkQuill_x.y.z_x64-setup.exe` or `MarkQuill_x.y.z_x64_en-US.msi` |
+| macOS, Apple silicon (M1 and later) | `MarkQuill_x.y.z_mac_m_arm.dmg` |
+| macOS, Intel | `MarkQuill_x.y.z_mac_intelx64.dmg` |
+| Windows 10/11, x64 | `MarkQuill_x.y.z_win-x64-setup.exe` or `MarkQuill_x.y.z_win-x64.msi` |
+| Windows 11, ARM | `MarkQuill_x.y.z_win-arm-setup.exe` |
 | Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_x.y.z_amd64.deb` |
 | Linux: Fedora | `MarkQuill-x.y.z-1.x86_64.rpm` |
 

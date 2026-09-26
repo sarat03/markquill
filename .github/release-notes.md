@@ -4,11 +4,14 @@ A small, fast Markdown viewer and editor for macOS, Windows and Linux.
 
 | OS | File |
 |---|---|
-| macOS, Apple silicon (M1 and later) | `MarkQuill_*_aarch64.dmg` |
-| macOS, Intel | `MarkQuill_*_x64.dmg` |
-| Windows 10/11 | `MarkQuill_*_x64-setup.exe` (or the `.msi`) |
+| macOS, Apple silicon (M1 and later) | `MarkQuill_*_mac_m_arm.dmg` |
+| macOS, Intel | `MarkQuill_*_mac_intelx64.dmg` |
+| Windows 10/11, x64 | `MarkQuill_*_win-x64-setup.exe` (or the `.msi`) |
+| Windows 11, ARM | `MarkQuill_*_win-arm-setup.exe` |
 | Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_*_amd64.deb` |
 | Linux: Fedora | `MarkQuill-*.x86_64.rpm` |
+
+Or install from the command line: `brew install --cask markquill` after `brew tap sarat03/markquill https://github.com/sarat03/markquill` on macOS, `winget install Sarat.MarkQuill` on Windows. The [README](https://github.com/sarat03/markquill#download) has the Linux one-liners.
 
 ## First launch
 
