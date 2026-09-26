@@ -11,7 +11,7 @@ A small, fast Markdown viewer and editor for macOS, Windows and Linux.
 | Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_*_amd64.deb` |
 | Linux: Fedora | `MarkQuill-*.x86_64.rpm` |
 
-Or install from the command line: `brew install --cask markquill` after `brew tap sarat03/markquill https://github.com/sarat03/markquill` on macOS, `winget install Sarat.MarkQuill` on Windows. The [README](https://github.com/sarat03/markquill#download) has the Linux one-liners.
+Or install from the command line: `brew install --cask markquill` after `brew tap sarat03/markquill https://github.com/sarat03/markquill` on macOS, `winget install Sarat.MarkQuill` on Windows (coming soon). The [README](https://github.com/sarat03/markquill#download) has the Linux one-liners.
 
 ## First launch
 
