@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3C97EE"/>
+      <stop offset="1" stop-color="#1459B4"/>
+    </linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9F1FB"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded square, macOS icon grid: 824px body inside a 1024px canvas -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+
+  <!-- page, tilted, with a soft offset shadow -->
+  <g transform="rotate(-8 470 540)">
+    <rect x="262" y="262" width="420" height="540" rx="40" fill="#0B3A75" opacity=".28" transform="translate(14 20)"/>
+    <rect x="262" y="262" width="420" height="540" rx="40" fill="url(#page)"/>
+    <!-- M -->
+    <path d="M330 492 V362 L410 442 L490 362 V492" fill="none" stroke="#1A4E8E" stroke-width="44" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- down arrow -->
+    <path d="M585 362 V440" stroke="#1A4E8E" stroke-width="44" stroke-linecap="round"/>
+    <path d="M536 430 H634 L585 496 Z" fill="#1A4E8E" stroke="#1A4E8E" stroke-width="14" stroke-linejoin="round"/>
+    <!-- text lines -->
+    <rect x="316" y="560" width="316" height="26" rx="13" fill="#1A4E8E" opacity=".85"/>
+    <rect x="316" y="622" width="316" height="26" rx="13" fill="#1A4E8E" opacity=".85"/>
+    <rect x="316" y="684" width="190" height="26" rx="13" fill="#1A4E8E" opacity=".85"/>
+  </g>
+
+  <!-- quill: nib at the end of the last line, feather up to the right -->
+  <g transform="translate(532 690) rotate(-48)">
+    <g transform="translate(12 16)" fill="#0B3A75" opacity=".28">
+      <path d="M100 0 C165 -58 305 -112 470 -78 C492 -62 494 -34 478 -16 C345 34 205 38 100 0 Z"/>
+    </g>
+    <!-- vane -->
+    <path d="M100 0 C165 -58 305 -112 470 -78 C492 -62 494 -34 478 -16 C345 34 205 38 100 0 Z" fill="#F7FAFE" stroke="#8DB8E6" stroke-width="6" stroke-linejoin="round"/>
+    <!-- barbs -->
+    <g stroke="#C4DAF2" stroke-width="6" stroke-linecap="round" fill="none">
+      <path d="M190 -12 C200 -34 214 -50 232 -62"/>
+      <path d="M262 -18 C274 -44 290 -62 312 -78"/>
+      <path d="M338 -24 C350 -50 368 -68 392 -84"/>
+      <path d="M230 4 C244 14 262 20 284 24"/>
+      <path d="M320 -2 C336 8 356 12 380 14"/>
+    </g>
+    <!-- shaft -->
+    <path d="M58 0 C200 -8 340 -30 482 -46" fill="none" stroke="#8DB8E6" stroke-width="10" stroke-linecap="round"/>
+    <!-- nib -->
+    <path d="M0 0 L66 -17 C74 -6 74 6 66 17 Z" fill="#153F73"/>
+    <path d="M6 0 H44" stroke="#F7FAFE" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

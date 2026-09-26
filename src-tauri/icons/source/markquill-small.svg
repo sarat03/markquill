@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- simplified for 16-48 px: bigger page and M↓, no text lines, plain quill -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3C97EE"/>
+      <stop offset="1" stop-color="#1459B4"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <g transform="rotate(-8 460 520)">
+    <rect x="200" y="200" width="500" height="640" rx="56" fill="#FFFFFF"/>
+    <path d="M280 600 V330 L380 450 L480 330 V600" fill="none" stroke="#1A4E8E" stroke-width="84" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M598 330 V470" stroke="#1A4E8E" stroke-width="84" stroke-linecap="round"/>
+    <path d="M510 452 H686 L598 590 Z" fill="#1A4E8E" stroke="#1A4E8E" stroke-width="28" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(560 790) rotate(-52)">
+    <path d="M110 0 C175 -70 330 -125 500 -86 C524 -66 526 -34 508 -14 C360 44 215 44 110 0 Z" fill="#FFFFFF" stroke="#1A4E8E" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M0 0 L86 -24 C96 -8 96 8 86 24 Z" fill="#153F73"/>
+  </g>
+</svg>

@@ -11,6 +11,7 @@ swiftc -O -module-name MarkQuillPreview -application-extension -Xlinker -e -Xlin
   -o "$X/MacOS/MarkQuillPreview" macos/QuickLook/PreviewViewController.swift
 cp macos/App/Info.plist "$C/"; cp macos/QuickLook/Info.plist "$X/"
 cp -R web "$C/Resources/"; cp -R web "$X/Resources/"
+cp src-tauri/icons/icon.icns src-tauri/icons/Assets.car "$C/Resources/" # same icon as the Tauri app (light/dark on macOS 26+)
 # ponytail: ad-hoc signed, runs on this Mac only. Developer ID + notarization for public releases.
 codesign -f -s - --entitlements macos/QuickLook/QL.entitlements "$C/PlugIns/MarkQuillPreview.appex"
 codesign -f -s - build/MarkQuill.app
