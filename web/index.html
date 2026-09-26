@@ -1021,6 +1021,18 @@ function download(name, data, type){
   if (native) return native.postMessage({cmd: 'export', name, data});
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], {type})); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
+
+// Links in a document leave the app instead of navigating this window away (which would lose unsaved tabs):
+// the host opens web/mail links in the browser, .md files in a tab, and shows other files in their folder.
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href]');
+  if (!a || a.isContentEditable) return; // editing: a click places the caret
+  const href = a.getAttribute('href');
+  if (href.startsWith('#')) return; // footnotes, [toc]: scroll within the page
+  e.preventDefault();
+  if (native && !QL) native.postMessage({cmd: 'link', href, doc: T().path});
+  else if (!QL && /^(https?:|mailto:)/i.test(href)) open(href, '_blank', 'noopener');
+});
 async function saveTab(t = T()){
   if (t === editorTab) commit();
   if (native) {

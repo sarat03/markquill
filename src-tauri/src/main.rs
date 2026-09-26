@@ -9,6 +9,7 @@ use std::{collections::BTreeMap, fs, path::{Path, PathBuf}, sync::Mutex};
 use tauri::{webview::PageLoadEvent, AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 
 // One window = one page = its own set of tabs.
 #[derive(Default)]
@@ -83,6 +84,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
             if quit { app.exit(0) } else { let _ = w.destroy(); }
         }
         "closeCancelled" => st(app).quitting = false,
+        "link" => open_link(&w, &s("href"), &s("doc")),
         _ => {}
     }
     Value::Null
@@ -104,6 +106,9 @@ fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
         .initialization_script(if fresh { "window.FRESH = true" } else { "" })
         // the page handles drops itself (tab reordering, block moves, dropped files); Tauri's handler would swallow them
         .disable_drag_drop_handler()
+        // backstop for link handling in the page: this window only ever shows the app itself
+        .on_navigation(|u| matches!(u.scheme(), "tauri" | "about" | "blob" | "data")
+            || matches!(u.host_str(), Some("tauri.localhost" | "localhost" | "127.0.0.1")))
         .build()
         .expect("couldn't create a window")
 }
@@ -221,6 +226,35 @@ fn alert(w: &WebviewWindow, msg: &str) {
     w.dialog().message(msg).parent(w).show(|_| {}); // non-blocking: may be called on the main thread
 }
 
+// A link clicked in a document. Web and mail links go to the browser; a Markdown file opens in a tab;
+// any other file is shown in its folder rather than run, so a link in a downloaded document can't launch a program.
+fn open_link(w: &WebviewWindow, href: &str, doc: &str) {
+    let lower = href.to_ascii_lowercase();
+    if ["http://", "https://", "mailto:"].iter().any(|p| lower.starts_with(p)) {
+        let _ = w.opener().open_url(href, None::<&str>);
+        return;
+    }
+    if lower.contains(':') { return } // javascript:, file:, other schemes: never followed
+    if doc.is_empty() { return alert(w, "Save this document first: links are relative to its folder.") }
+    let rel = percent_decode(href.split(['#', '?']).next().unwrap_or(""));
+    let p = Path::new(doc).parent().unwrap_or(Path::new(".")).join(&rel);
+    if !p.exists() { return alert(w, &format!("{rel} doesn't exist.")) }
+    let md = p.extension().and_then(|e| e.to_str()).is_some_and(|e| ["md", "markdown", "mdown", "txt"].contains(&e.to_ascii_lowercase().as_str()));
+    if md && p.is_file() { open_file(w, &p) } else { let _ = w.opener().reveal_item_in_dir(&p); }
+}
+
+fn percent_decode(s: &str) -> String {
+    let (b, mut out, mut i) = (s.as_bytes(), Vec::with_capacity(s.len()), 0);
+    while i < b.len() {
+        let hex = b.get(i + 1..i + 3).filter(|h| b[i] == b'%' && h.iter().all(u8::is_ascii_hexdigit));
+        match hex {
+            Some(h) => { out.push(u8::from_str_radix(std::str::from_utf8(h).unwrap(), 16).unwrap()); i += 3 }
+            None => { out.push(b[i]); i += 1 }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 fn err(msg: impl Into<String>) -> Value { json!({"error": msg.into()}) }
 
 // Names that are valid on every platform, so documents survive a trip to Windows
@@ -281,6 +315,7 @@ fn main() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(St::default())
         .invoke_handler(tauri::generate_handler![native])
         .on_page_load(|w, p| {
@@ -368,6 +403,14 @@ mod tests {
         for bad in ["", ".hidden", "a/b.md", r"a\b.md", "a:b.md", "why?.md", "CON.md", "nul", "lpt1.txt", "trailing.", "x\u{7}.md"] {
             assert!(!valid_name(bad), "{bad}")
         }
+    }
+
+    #[test]
+    fn links_decode_like_the_page_encoded_them() {
+        assert_eq!(percent_decode("My%20Notes/a%2Bb.md"), "My Notes/a+b.md");
+        assert_eq!(percent_decode("caf%C3%A9.md"), "café.md");
+        assert_eq!(percent_decode("100%.md"), "100%.md"); // a lone % stays
+        assert_eq!(percent_decode("x%zz%4"), "x%zz%4");
     }
 
     #[test]

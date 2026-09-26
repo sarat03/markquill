@@ -45,6 +45,11 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         queued = []
     }
 
+    // backstop for link handling in the page: this window only ever shows the app itself
+    func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler done: @escaping (WKNavigationActionPolicy) -> Void) {
+        done(a.request.url?.isFileURL == true || a.request.url?.scheme == "about" ? .allow : .cancel)
+    }
+
     // the page's file picker (Attach image or file)
     func webView(_ w: WKWebView, runOpenPanelWith p: WKOpenPanelParameters, initiatedByFrame f: WKFrameInfo, completionHandler done: @escaping ([URL]?) -> Void) {
         let panel = NSOpenPanel()
@@ -61,6 +66,21 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         }
         NSDocumentController.shared.noteNewRecentDocumentURL(url)
         load([url.lastPathComponent, text, baseDir(url), url.path, false])
+    }
+
+    // A link clicked in a document. Web and mail links go to the browser; a Markdown file opens in a tab;
+    // any other file is shown in Finder rather than run, so a link in a downloaded document can't launch a program.
+    func openLink(_ href: String, doc: String) {
+        let lower = href.lowercased()
+        if ["http://", "https://", "mailto:"].contains(where: lower.hasPrefix), let u = URL(string: href) { NSWorkspace.shared.open(u); return }
+        if lower.contains(":") { return } // javascript:, file:, other schemes: never followed
+        guard !doc.isEmpty else { return alert("Save this document first: links are relative to its folder.") }
+        let raw = href.split(whereSeparator: { $0 == "#" || $0 == "?" }).first.map(String.init) ?? ""
+        let rel = raw.removingPercentEncoding ?? raw
+        let u = URL(fileURLWithPath: doc).deletingLastPathComponent().appendingPathComponent(rel).standardized
+        guard FileManager.default.fileExists(atPath: u.path) else { return alert("\(rel) doesn't exist.") }
+        if ["md", "markdown", "mdown", "txt"].contains(u.pathExtension.lowercased()) { openFile(u) }
+        else { NSWorkspace.shared.activateFileViewerSelecting([u]) }
     }
 
     func call(_ fn: String, _ args: [Any]) {
@@ -104,6 +124,8 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         case "newWindow": // optionally carrying a tab moved out of this window
             let d = app.newDoc(fresh: true)
             if !s("name").isEmpty { d.load([s("name"), s("text"), s("base"), s("path"), b["dirty"] as? Bool ?? false]) }
+        case "link":
+            openLink(s("href"), doc: s("doc"))
         case "closeWindow": // the page closed its last tab; nothing is unsaved
             dirty = false
             window.close()
