@@ -7,14 +7,14 @@ A small, fast Markdown viewer and editor for macOS, Windows and Linux.
 | macOS, Apple silicon (M1 and later) | `MarkQuill_*_aarch64.dmg` |
 | macOS, Intel | `MarkQuill_*_x64.dmg` |
 | Windows 10/11 | `MarkQuill_*_x64-setup.exe` (or the `.msi`) |
-| Linux: Debian, Ubuntu, Mint… | `MarkQuill_*_amd64.deb` |
-| Linux: Fedora, openSUSE… | `MarkQuill-*.x86_64.rpm` |
+| Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_*_amd64.deb` |
+| Linux: Fedora | `MarkQuill-*.x86_64.rpm` |
 
 ## First launch
 
 The installers aren't code-signed yet, so your OS warns you the first time:
 
-- **macOS:** open the `.dmg`, drag MarkQuill to Applications, then right-click it → **Open** → **Open**. You only need to do this once.
+- **macOS:** open the `.dmg` and drag MarkQuill to Applications. Open it once; macOS blocks it. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. If macOS says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/MarkQuill.app` in Terminal.
 - **Windows:** on the SmartScreen prompt, click **More info** → **Run anyway**.
 - **Linux:** `sudo apt install ./MarkQuill_*.deb` or `sudo dnf install ./MarkQuill-*.rpm`.
 
