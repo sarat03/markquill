@@ -2,11 +2,11 @@
 
 **A small, fast Markdown viewer and editor for macOS, Windows and Linux.**
 
-MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so it downloads in about **4 MB** and uses about as much memory as one browser tab.
+MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so the download is only about **4–5 MB** on every OS.
 
 | | Typical Electron editor | **MarkQuill** |
 |---|---|---|
-| Download | 80–150 MB | ~4 MB (macOS) |
+| Download | Usually 80 MB or more | 4–5 MB |
 | Engine | Bundled Chromium | The one your OS already has (WebKit, WebView2, WebKitGTK) |
 | Works offline | Usually | Always: math, diagrams and code colors are bundled |
 
@@ -17,13 +17,14 @@ Get the latest installer from [Releases](https://github.com/sarat03/markquill/re
 | OS | File |
 |---|---|
 | macOS (Apple silicon / Intel) | `MarkQuill_x.y.z_aarch64.dmg` / `MarkQuill_x.y.z_x64.dmg` |
-| Windows 10/11 | `MarkQuill_x.y.z_x64-setup.exe` or `.msi` |
-| Linux | `.deb` (Debian, Ubuntu, Mint…) or `.rpm` (Fedora, openSUSE…) |
+| Windows 10/11 | `MarkQuill_x.y.z_x64-setup.exe` or `MarkQuill_x.y.z_x64_en-US.msi` |
+| Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_x.y.z_amd64.deb` |
+| Linux: Fedora | `MarkQuill-x.y.z-1.x86_64.rpm` |
 
 The builds are not code-signed yet, so the first launch shows a warning:
-- **macOS:** right-click MarkQuill in Applications → **Open** → **Open**. You only need to do this once.
+- **macOS:** open MarkQuill once; macOS blocks it. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only need to do this once. If macOS says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/MarkQuill.app` in Terminal, then open it again.
 - **Windows:** on the SmartScreen prompt, click **More info** → **Run anyway**.
-- **Linux:** `sudo apt install ./MarkQuill_*.deb` or `sudo dnf install ./MarkQuill-*.rpm`. The package pulls in the system's WebKitGTK.
+- **Linux:** install with `sudo apt install ./MarkQuill_*.deb` or `sudo dnf install ./MarkQuill-*.rpm`. The package pulls in the system's WebKitGTK.
 
 ## Features
 
@@ -45,7 +46,7 @@ The builds are not code-signed yet, so the first launch shows a warning:
 - Optional auto-save for files that are already on disk.
 - Line endings and a BOM are kept on save, so a file from Windows stays a Windows file.
 
-**Export and copy.** Export to HTML (self-contained), PDF (paper size, margins and page numbers) or Markdown. Copy as Markdown, rich text, HTML or plain text.
+**Export and copy.** Export to HTML (self-contained), PDF (through the system print dialog) or Markdown. Copy as Markdown, rich text, HTML or plain text.
 
 **Appearance.** Auto/light/dark theme; sans, serif or mono text; size, line height and page width; code font, size, tab width and colors (GitHub, VS Code, Red Accent); plus your own CSS. All changes apply live.
 
@@ -62,6 +63,8 @@ On Windows and Linux, use **Ctrl** for ⌘, **Alt** for ⌥ and **Shift** for �
 | Settings | ⌘, | | Paragraph / Heading 1–6 | ⌥⌘0 / ⌥⌘1–6 |
 | Quote | ⌥⌘Q | | Ordered / bullet / task list | ⌥⇧⌘O / U / X |
 | Duplicate block | ⇧⌘P | | New paragraph / delete block | ⇧⌘N / ⇧⌘D |
+
+The block shortcuts (headings, quote, lists, duplicate, new paragraph, delete) work in Edit mode.
 
 ## How it's built
 
@@ -81,7 +84,7 @@ macos/               Mac-only extras (Swift)
 .github/workflows/   CI: tests, builds and a launch check on every OS; draft release on tags
 ```
 
-The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are ten commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change.
+The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change.
 
 ## Build from source
 
@@ -90,7 +93,7 @@ The page talks to its shell with `native.postMessage({cmd, ...})` and gets a pro
 Needs [Rust](https://rustup.rs) and Node.js 18+. On Linux, also the WebKitGTK dev packages:
 
 ```bash
-sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
+sudo apt install build-essential file libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
 ```
 
 Then:
@@ -100,7 +103,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` runs the app. `npm run build` creates installers in `src-tauri/target/release/bundle/`. `cargo test` in `src-tauri/` runs the unit tests. To replace the placeholder icon, run `npm run icon path/to/icon.png`.
+`npm run dev` runs the app. `npm run build` creates installers in `src-tauri/target/release/bundle/`. `cargo test` in `src-tauri/` runs the unit tests. To change the app icon, run `npm run icon path/to/icon.png` with a square PNG of at least 1024×1024.
 
 ### macOS app with Quick Look (Swift)
 
@@ -115,7 +118,7 @@ This builds `build/MarkQuill.app` with the Quick Look extension embedded. After 
 
 ### Working on the UI
 
-Edit `web/index.html` and reload. Every shell loads the same file, so a UI change reaches every platform.
+Edit `web/index.html` while `npm run dev` is running, then reload the window (right-click → **Reload**). Every shell loads the same file, so a UI change reaches every platform.
 
 ## Releasing
 
@@ -139,7 +142,7 @@ Please report security problems privately, not in a public issue. [SECURITY.md](
 
 ## License
 
-MarkQuill is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it; if you distribute a modified version, it must also be under the GPL-3.0 with its source available.
+MarkQuill is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it. If you distribute it, modified or not, you must do so under the GPL-3.0 and make the source code available.
 
 Copyright © 2026 Sarat.
 
