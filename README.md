@@ -2,11 +2,11 @@
 
 **A small, fast Markdown viewer and editor for macOS, Windows and Linux.**
 
-MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so the download is only about **4–5 MB** on every OS.
+MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so the download is only about **5 MB** on Windows and Linux and **7 MB** on macOS.
 
 | | Typical Electron editor | **MarkQuill** |
 |---|---|---|
-| Download | Usually 80 MB or more | 4–5 MB |
+| Download | Usually 80 MB or more | 5–7 MB |
 | Engine | Bundled Chromium | The one your OS already has (WebKit, WebView2, WebKitGTK) |
 | Works offline | Usually | Always: math, diagrams and code colors are bundled |
 
@@ -76,7 +76,8 @@ web/                 The app: index.html (plain HTML/CSS/JS, no framework, no bu
 src-tauri/           Cross-platform shell (Rust + Tauri 2) for macOS, Windows and Linux
   src/main.rs        The native commands, session restore, file handling
   tauri.conf.json    App name, identifier, file associations, bundling
-package.json         Tauri CLI scripts: dev, build, icon
+  icons/source/      App icon: SVG sources and build-icons.sh (light and dark on macOS)
+package.json         Tauri CLI scripts: dev, build
 macos/               Mac-only extras (Swift)
   App/               The original native macOS shell (Cocoa + WKWebView)
   QuickLook/         Quick Look extension: spacebar in Finder renders with the same page
@@ -103,7 +104,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` runs the app. `npm run build` creates installers in `src-tauri/target/release/bundle/`. `cargo test` in `src-tauri/` runs the unit tests. To change the app icon, run `npm run icon path/to/icon.png` with a square PNG of at least 1024×1024.
+`npm run dev` runs the app. `npm run build` creates installers in `src-tauri/target/release/bundle/`. `cargo test` in `src-tauri/` runs the unit tests. The app icon is drawn in `src-tauri/icons/source/` (SVG); after editing it, run `src-tauri/icons/source/build-icons.sh` on a Mac with Xcode to rebuild every icon file.
 
 ### macOS app with Quick Look (Swift)
 

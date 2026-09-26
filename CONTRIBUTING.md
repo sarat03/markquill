@@ -28,7 +28,7 @@ Keep that split. If a web page can do something, it belongs in `web/index.html`.
 - Keep changes focused: one fix or feature per pull request.
 - Don't change the version number; releases are made by the maintainer.
 - Match the surrounding code style. The code is compact and comments explain *why*, not *what*.
-- Don't add a dependency for something a few lines can do. MarkQuill stays small on purpose: the download is about 4–5 MB.
+- Don't add a dependency for something a few lines can do. MarkQuill stays small on purpose: the download is about 5–7 MB.
 - If you change the Rust code, run `cargo test` in `src-tauri/`, and add a test for any new logic.
 - Test on the OS you have. CI builds, tests and launches the app on macOS, Windows and Linux for every pull request, so check that it's green.
 - Keyboard shortcuts are written Mac-style (`⌘`, `⌥`, `⇧`) in the page. They become Ctrl, Alt and Shift on Windows and Linux automatically.
