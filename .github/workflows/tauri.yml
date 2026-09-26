@@ -111,7 +111,7 @@ jobs:
           mkdir installers
           b=src-tauri/target/${{ env.TARGET }}/release/bundle
           name=MarkQuill_$(grep -m1 '^version' src-tauri/Cargo.toml | cut -d '"' -f2)_${{ matrix.platform }}
-          cp $b/{deb/*.deb,rpm/*.rpm} installers/
+          for f in $b/deb/*.deb $b/rpm/*.rpm; do cp "$f" installers/; done
           for f in $b/dmg/*.dmg; do cp "$f" installers/$name.dmg; done
           for f in $b/nsis/*.exe; do cp "$f" installers/$name-setup.exe; done
           for f in $b/msi/*.msi; do cp "$f" installers/$name.msi; done
