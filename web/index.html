@@ -1024,15 +1024,34 @@ function download(name, data, type){
 
 // Links in a document leave the app instead of navigating this window away (which would lose unsaved tabs):
 // the host opens web/mail links in the browser, .md files in a tab, and shows other files in their folder.
+// Capture phase, so diagram engines' own link handlers never run; covers SVG links (xlink:href) in diagrams too.
 document.addEventListener('click', e => {
-  const a = e.target.closest('a[href]');
-  if (!a || a.isContentEditable) return; // editing: a click places the caret
-  const href = a.getAttribute('href');
+  const a = e.target.closest?.('a');
+  const href = a && (a.getAttribute('href') ?? a.getAttribute('xlink:href'));
+  if (href == null || a.isContentEditable) return; // editing: a click places the caret
   if (href.startsWith('#')) return; // footnotes, [toc]: scroll within the page
-  e.preventDefault();
+  e.preventDefault(); e.stopPropagation();
+  if (SCRIPT_URL.test(href)) return; // never followed, whatever produced it
   if (native && !QL) native.postMessage({cmd: 'link', href, doc: T().path});
   else if (!QL && /^(https?:|mailto:)/i.test(href)) open(href, '_blank', 'noopener');
-});
+}, true);
+
+// Second line of defence for rendered documents. Markdown is sanitized before rendering, but diagram engines run
+// after that and can still emit script links, event handlers or frames; strip them from the view and the editor.
+const SCRIPT_URL = /^\s*(javascript|vbscript|data):/i;
+function defang(el){
+  if (/^(IFRAME|FRAME|OBJECT|EMBED|SCRIPT|BASE|META|FORM|LINK)$/i.test(el.tagName)) return el.remove();
+  for (const {name, value} of [...el.attributes]) {
+    const n = name.toLowerCase();
+    if (n.startsWith('on') || (/^(href|xlink:href|action|formaction)$/.test(n) && SCRIPT_URL.test(value))
+        || (n === 'src' && /^\s*(javascript|vbscript):/i.test(value))) el.removeAttribute(name); // data: images stay
+  }
+}
+const defangObserver = new MutationObserver(ms => { for (const m of ms) {
+  if (m.type === 'attributes') { if (m.target.isConnected) defang(m.target); continue; }
+  for (const n of m.addedNodes) if (n.nodeType === 1) { n.querySelectorAll('*').forEach(defang); defang(n); }
+}});
+for (const id of ['#doc', '#editor']) defangObserver.observe($(id), {subtree: true, childList: true, attributes: true});
 async function saveTab(t = T()){
   if (t === editorTab) commit();
   if (native) {

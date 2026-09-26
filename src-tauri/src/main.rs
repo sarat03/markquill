@@ -5,7 +5,7 @@
 
 use base64::Engine;
 use serde_json::{json, Value};
-use std::{collections::BTreeMap, fs, path::{Path, PathBuf}, sync::Mutex};
+use std::{collections::{BTreeMap, BTreeSet}, fs, path::{Path, PathBuf}, sync::Mutex};
 use tauri::{webview::PageLoadEvent, AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
@@ -24,6 +24,9 @@ struct Win {
 struct Inner {
     wins: BTreeMap<String, Win>,          // labels are zero-padded so the map keeps window order
     formats: BTreeMap<String, (bool, bool)>, // path -> (had a BOM, used CRLF), restored on save
+    // Files the user opened or picked in a dialog. The page can only save, rename, attach to and restore these,
+    // so script smuggled into a document can't write anywhere else even if it got past the sanitizer.
+    files: BTreeSet<String>,
     quitting: bool,
     next: u32,
 }
@@ -46,6 +49,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
                 win.dirty = dirty;
                 win.paths = msg["paths"].as_array().into_iter().flatten().filter_map(|p| p.as_str().map(String::from)).collect();
             }
+            { let mut g = st(app); let known = g.files.clone(); for win in g.wins.values_mut() { win.paths.retain(|p| known.contains(p)) } }
             save_session(app);
         }
         "open" => {
@@ -53,10 +57,15 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
             for p in picked.into_iter().flatten().filter_map(|f| f.into_path().ok()) { open_file(&w, &p) }
         }
         "save" => { // path given: write it. No path: ask where, reply with the new identity.
-            if !s("path").is_empty() { return json!(write(&w, &s("data"), Path::new(&s("path")))) }
-            return match save_panel(&w, &s("name")) { Some(p) if write(&w, &s("data"), &p) => info(&p), _ => json!(false) };
+            if !s("path").is_empty() {
+                if !known(app, &s("path")) { alert(&w, "MarkQuill only saves files you opened or chose."); return json!(false) }
+                return json!(write(&w, &s("data"), Path::new(&s("path"))));
+            }
+            return match save_panel(&w, &s("name")) { Some(p) if write(&w, &s("data"), &p) => { allow(app, &p); info(&p) } _ => json!(false) };
         }
-        "rename" => return rename(app, &s("path"), &s("name")),
+        "rename" if known(app, &s("path")) => return rename(app, &s("path"), &s("name")),
+        "rename" => return err("MarkQuill only renames files you opened or chose."),
+        "asset" if !s("doc").is_empty() && !known(app, &s("doc")) => return err("MarkQuill only adds attachments next to files you opened or chose."),
         "asset" => return save_asset(&s("doc"), &s("name"), &s("data"), if s("folder") == "images" { "images" } else { "assets" }),
         "export" => if let Some(p) = save_panel(&w, &s("name")) { write(&w, &s("data"), &p); },
         "copy" => {
@@ -190,6 +199,7 @@ fn open_file(w: &WebviewWindow, p: &Path) {
     };
     let (text, format) = decode(&text);
     st(w.app_handle()).formats.insert(p.to_string_lossy().into_owned(), format);
+    allow(w.app_handle(), &p);
     let i = info(&p);
     load(w, json!([i["name"], text, i["base"], i["path"], false]));
 }
@@ -255,6 +265,9 @@ fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+fn allow(app: &AppHandle, p: &Path) { st(app).files.insert(p.to_string_lossy().into_owned()); }
+fn known(app: &AppHandle, p: &str) -> bool { st(app).files.contains(p) }
+
 fn err(msg: impl Into<String>) -> Value { json!({"error": msg.into()}) }
 
 // Names that are valid on every platform, so documents survive a trip to Windows
@@ -279,6 +292,8 @@ fn rename(app: &AppHandle, path: &str, name: &str) -> Value {
         Ok(_) => {
             let mut g = st(app);
             if let Some(f) = g.formats.remove(path) { g.formats.insert(dst.to_string_lossy().into_owned(), f); }
+            g.files.remove(path);
+            g.files.insert(dst.to_string_lossy().into_owned());
             info(&dst)
         }
         Err(e) => err(e.to_string()),
