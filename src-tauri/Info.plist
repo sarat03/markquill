@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into the macOS app's Info.plist by Tauri. macOS 26+ uses the light/dark icon in Assets.car;
+     older versions fall back to icon.icns. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
+</dict>
+</plist>

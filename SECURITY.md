@@ -20,7 +20,7 @@ These points describe the Tauri app, which is what the Releases page ships.
 
 - **No telemetry, no accounts, no update checks.** The app itself makes no network requests. Its editor, math, diagram and code-color engines are bundled.
 - **Documents can load remote content.** An image or link in a Markdown file that points to a web address is fetched from there, the same as in any Markdown viewer.
-- **HTML in documents is sanitized.** Scripts, event handlers and `javascript:` links are removed before a document is shown, so opening a `.md` file shouldn't run code.
+- **Documents can't run code.** HTML in a document is sanitized before it's shown. Diagrams run in Mermaid's strict mode. Script links, event handlers and embedded frames are also stripped from whatever the diagram engines draw.
 - **Links leave the app.** Clicking a web or email link opens your browser. A link to a Markdown file opens it in a tab. A link to any other file shows it in Finder or Explorer; MarkQuill never runs it. The app window can't be navigated to another page.
-- **Files are only touched when you act.** MarkQuill reads files you open, and writes files you save, rename or attach. It also stores its session (which files were open) in the app's data folder.
+- **Files are only touched when you act.** MarkQuill reads files you open, and writes files you save, rename or attach to. The app only writes to files you opened or picked in a dialog, so even a document that got past the protections above couldn't overwrite anything else. It also stores its session (which files were open) in the app's data folder.
 - **Installers are not code-signed yet.** macOS and Windows warn about this on first launch. Only download MarkQuill from this repository's Releases page.

@@ -48,6 +48,11 @@
         "role": "Editor",
         "mimeType": "text/markdown"
       }
-    ]
+    ],
+    "macOS": {
+      "files": {
+        "Resources/Assets.car": "icons/Assets.car"
+      }
+    }
   }
 }
