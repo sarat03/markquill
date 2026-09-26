@@ -81,7 +81,7 @@ macos/               Mac-only extras (Swift)
   App/               The original native macOS shell (Cocoa + WKWebView)
   QuickLook/         Quick Look extension: spacebar in Finder renders with the same page
   build.sh           Builds build/MarkQuill.app with Quick Look embedded
-.github/workflows/   CI: tests, builds and a launch check on every OS; draft release on tags
+.github/workflows/   CI: tests, builds and a launch check on every OS
 ```
 
 The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change.
@@ -119,18 +119,6 @@ This builds `build/MarkQuill.app` with the Quick Look extension embedded. After 
 ### Working on the UI
 
 Edit `web/index.html` while `npm run dev` is running, then reload the window (right-click → **Reload**). Every shell loads the same file, so a UI change reaches every platform.
-
-## Releasing
-
-1. Set the new version in `src-tauri/Cargo.toml` (`version = "0.2.0"`). It's the only place the version lives, and the installers are named after it.
-2. Merge that change to `main`, then tag it and push the tag:
-
-   ```bash
-   git tag v0.2.0
-   git push origin v0.2.0
-   ```
-
-3. CI checks that the tag matches the version, builds every platform and attaches the installers to a draft release. Check the draft and publish it.
 
 ## Contributing
 

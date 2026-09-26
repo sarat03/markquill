@@ -1,5 +1,10 @@
 # Builds MarkQuill on every OS, runs the unit tests and launches each build once.
-# A tag like v0.2.0 also makes one draft release and attaches every installer to it (see README > Releasing).
+#
+# Releasing (maintainer only):
+#   1. Set the version in src-tauri/Cargo.toml. It's the only place it lives; installers are named after it.
+#   2. Merge that to main, then tag it:  git tag v0.2.0 && git push origin v0.2.0
+#   3. The tag run checks it matches the version, creates one draft release (notes from
+#      .github/release-notes.md plus merged PRs) and attaches every installer. Check the draft, then publish.
 name: Tauri
 
 on:
