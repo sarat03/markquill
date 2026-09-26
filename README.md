@@ -4,6 +4,11 @@
 
 MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so the download is only about **5 MB** on Windows and Linux and **7 MB** on macOS.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img alt="MarkQuill showing a Markdown document with a task list, a table, highlighted code, math and a diagram" src="docs/screenshot-light.png">
+</picture>
+
 | | Typical Electron editor | **MarkQuill** |
 |---|---|---|
 | Download | Usually 80 MB or more | 5–7 MB |
@@ -82,7 +87,7 @@ macos/               Mac-only extras (Swift)
   App/               The original native macOS shell (Cocoa + WKWebView)
   QuickLook/         Quick Look extension: spacebar in Finder renders with the same page
   build.sh           Builds build/MarkQuill.app with Quick Look embedded
-.github/workflows/   CI: tests, builds and a launch check on every OS
+.github/workflows/   CI: tests, build and launch check (Linux per pull request, every OS per release)
 ```
 
 The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change.

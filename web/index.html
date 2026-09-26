@@ -455,9 +455,19 @@ const hlOpts = () => ({style: opt('code-colors') === 'vscode' ? 'vs2015' : dark(
 const applyCodeTheme = () => Vditor.setCodeTheme(hlOpts().style, CDN);
 
 // ---- View mode ----
-function renderView(){
+// Load the content theme's stylesheet before rendering: diagrams measure their labels as they draw, and on WebKit
+// measured them without the dark stylesheet, clipping every label in dark mode.
+function themeCss(){
+  const {current, path} = theme();
+  Vditor.setContentTheme(current, path);
+  const link = document.getElementById('vditorContentTheme');
+  if (!link || link.sheet) return Promise.resolve();
+  return new Promise(r => { link.addEventListener('load', r, {once: true}); link.addEventListener('error', r, {once: true}); setTimeout(r, 1500); });
+}
+async function renderView(){
   document.body.classList.toggle('empty', !QL && !T().value.trim());
   applyCodeTheme();
+  await themeCss();
   return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
 }
 $('#empty').addEventListener('click', e => {

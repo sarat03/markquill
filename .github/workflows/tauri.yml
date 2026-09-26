@@ -1,8 +1,10 @@
-# Builds MarkQuill on every OS, runs the unit tests and launches each build once.
+# Builds MarkQuill, runs the unit tests and launches the build once.
+# Pull requests and main build Linux only (macOS runners cost 10x the Actions minutes, Windows 2x); tags and
+# manual runs (Actions > Tauri > Run workflow) build every OS. Every pull request runs it: main requires the Linux build.
 #
 # Releasing (maintainer only):
 #   1. Set the version in src-tauri/Cargo.toml. It's the only place it lives; installers are named after it.
-#   2. Merge that to main, then tag it:  git tag v0.2.0 && git push origin v0.2.0
+#   2. Merge that to main. Optionally run this workflow on main by hand first to build every OS. Then tag it:  git tag v0.2.0 && git push origin v0.2.0
 #   3. The tag run checks it matches the version, creates one draft release (notes from
 #      .github/release-notes.md plus merged PRs) and attaches every installer. Check the draft, then publish.
 name: Tauri
@@ -43,21 +45,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest   # Apple silicon
-            target: aarch64-apple-darwin
-            bundles: app,dmg
-          - os: macos-latest   # Intel Macs
-            target: x86_64-apple-darwin
-            bundles: app,dmg
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            bundles: nsis,msi
-          - os: ubuntu-22.04   # oldest supported glibc/WebKitGTK, so the packages install on more distros
-            target: x86_64-unknown-linux-gnu
-            # no AppImage: it bundles its own WebKitGTK (~80 MB); .deb/.rpm use the system's (~5 MB)
-            bundles: deb,rpm
-    runs-on: ${{ matrix.os }}
+        platform: ${{ fromJSON((startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
+          && '["mac-arm", "mac-intel", "windows", "linux"]' || '["linux"]') }}
+    # Per platform: runner, Rust target and installers. Lookups rather than matrix `include`, which would add the
+    # Mac and Windows jobs back on pull requests. Linux builds on the oldest supported Ubuntu so the packages
+    # install on more distros, and ships .deb/.rpm only: an AppImage bundles its own WebKitGTK (~80 MB).
+    runs-on: ${{ fromJSON('{"mac-arm":"macos-latest","mac-intel":"macos-latest","windows":"windows-latest","linux":"ubuntu-22.04"}')[matrix.platform] }}
+    env:
+      TARGET: ${{ fromJSON('{"mac-arm":"aarch64-apple-darwin","mac-intel":"x86_64-apple-darwin","windows":"x86_64-pc-windows-msvc","linux":"x86_64-unknown-linux-gnu"}')[matrix.platform] }}
+      BUNDLES: ${{ fromJSON('{"mac-arm":"app,dmg","mac-intel":"app,dmg","windows":"nsis,msi","linux":"deb,rpm"}')[matrix.platform] }}
     defaults:
       run:
         shell: bash
@@ -72,11 +68,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ env.TARGET }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-          key: ${{ matrix.target }}
+          key: ${{ env.TARGET }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -87,15 +83,15 @@ jobs:
       - name: Build
         run: |
           npm ci
-          npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          npx tauri build --target ${{ env.TARGET }} --bundles ${{ env.BUNDLES }}
 
       # The webview must come up and stay up with a document open. Catches missing runtime libs,
       # a broken bundle or a crash on start; says nothing about how the page looks.
       - name: Launch check
         # an Intel build can't start on the Apple silicon runner without Rosetta
-        if: matrix.target != 'x86_64-apple-darwin'
+        if: matrix.platform != 'mac-intel'
         run: |
-          bin=src-tauri/target/${{ matrix.target }}/release/markquill
+          bin=src-tauri/target/${{ env.TARGET }}/release/markquill
           [ "$RUNNER_OS" = Windows ] && bin=$bin.exe
           wrap=; [ "$RUNNER_OS" = Linux ] && wrap="xvfb-run -a"
           printf '# Launch check\n\n$E=mc^2$\n\n```mermaid\ngraph LR\n  A --> B\n```\n' > launch-check.md
@@ -108,13 +104,13 @@ jobs:
         run: |
           shopt -s nullglob
           mkdir installers
-          cp src-tauri/target/${{ matrix.target }}/release/bundle/{dmg/*.dmg,nsis/*.exe,msi/*.msi,deb/*.deb,rpm/*.rpm} installers/
+          cp src-tauri/target/${{ env.TARGET }}/release/bundle/{dmg/*.dmg,nsis/*.exe,msi/*.msi,deb/*.deb,rpm/*.rpm} installers/
           ls -l installers
           [ -n "$(ls installers)" ] || { echo "No installers were built"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MarkQuill-${{ matrix.target }}
+          name: MarkQuill-${{ env.TARGET }}
           path: installers/*
 
       - name: Attach to the draft release
