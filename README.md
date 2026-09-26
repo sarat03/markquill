@@ -18,12 +18,12 @@ Get the latest installer from [Releases](https://github.com/sarat03/markquill/re
 |---|---|
 | macOS (Apple silicon / Intel) | `MarkQuill_x.y.z_aarch64.dmg` / `MarkQuill_x.y.z_x64.dmg` |
 | Windows 10/11 | `MarkQuill_x.y.z_x64-setup.exe` or `.msi` |
-| Linux | `.AppImage` (any distro) or `.deb` (Debian/Ubuntu) |
+| Linux | `.deb` (Debian, Ubuntu, Mint…) or `.rpm` (Fedora, openSUSE…) |
 
 The builds are not code-signed yet, so the first launch shows a warning:
 - **macOS:** right-click MarkQuill in Applications → **Open** → **Open**. You only need to do this once.
 - **Windows:** on the SmartScreen prompt, click **More info** → **Run anyway**.
-- **Linux AppImage:** `chmod +x MarkQuill_*.AppImage`, then run it.
+- **Linux:** `sudo apt install ./MarkQuill_*.deb` or `sudo dnf install ./MarkQuill-*.rpm`. The package pulls in the system's WebKitGTK.
 
 ## Features
 
