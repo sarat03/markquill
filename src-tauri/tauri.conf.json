@@ -24,7 +24,6 @@
     "publisher": "Sarat",
     "copyright": "Copyright © 2026 Sarat. Licensed under GPL-3.0-only.",
     "license": "GPL-3.0-only",
-    "licenseFile": "../LICENSE",
     "homepage": "https://github.com/sarat03/markquill",
     "category": "Productivity",
     "shortDescription": "Small, fast Markdown viewer and editor",
