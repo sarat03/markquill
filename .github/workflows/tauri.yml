@@ -1,0 +1,95 @@
+# Builds the Tauri app on every OS, runs the unit tests and launches each build once.
+# Push a tag like v0.2.0 to also attach the installers to a draft GitHub release.
+name: Tauri
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # draft releases on tags
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest   # Apple silicon
+            target: aarch64-apple-darwin
+          - os: macos-latest   # Intel Macs
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-22.04   # oldest supported glibc/WebKitGTK, so the .deb/.AppImage runs on more distros
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux build deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf xvfb
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Unit tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Install Tauri CLI
+        run: npm ci
+
+      - name: Build
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: npx tauri
+          args: --target ${{ matrix.target }}
+          # only tags publish; branch and PR builds just build
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: MarkQuill ${{ github.ref_name }}
+          releaseDraft: true
+
+      # The webview must come up and stay up with a document open. Catches missing runtime libs,
+      # a broken bundle or a crash on start; says nothing about how the page looks.
+      - name: Launch check
+        # an Intel build can't start on the Apple silicon runner without Rosetta
+        if: matrix.target != 'x86_64-apple-darwin'
+        run: |
+          bin=src-tauri/target/${{ matrix.target }}/release/markquill
+          [ "$RUNNER_OS" = Windows ] && bin=$bin.exe
+          wrap=; [ "$RUNNER_OS" = Linux ] && wrap="xvfb-run -a"
+          printf '# Launch check\n\n$E=mc^2$\n\n```mermaid\ngraph LR\n  A --> B\n```\n' > launch-check.md
+          $wrap "$bin" launch-check.md & pid=$!
+          sleep 20
+          kill -0 $pid || { echo "MarkQuill exited during startup"; exit 1; }
+          kill $pid || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MarkQuill-${{ matrix.target }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+          if-no-files-found: error

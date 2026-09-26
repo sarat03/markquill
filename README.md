@@ -1,73 +1,130 @@
-# MDView
+# MarkQuill
 
-**A Markdown viewer/editor for macOS where the entire app is one HTML file.**
+**A small, fast Markdown viewer and editor for macOS, Windows and Linux.**
 
-No Electron. No bundler. No build step for the UI. `web/index.html` — under 600 lines — *is* the app: tabs, three editing modes, themes, diagrams, math, exports, everything. The native side is ~340 lines of Swift whose only job is answering the things a browser sandbox can't do (open/save dialogs, printing, the window). The same HTML file also powers Quick Look, so pressing spacebar on a `.md` file in Finder renders it with the *exact* renderer the full app uses — not a second, worse one.
+MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so it downloads in about **4 MB** and uses about as much memory as one browser tab.
 
-```
-open README.md → spacebar in Finder → identical rendering to the full app
-```
+| | Typical Electron editor | **MarkQuill** |
+|---|---|---|
+| Download | 80–150 MB | ~4 MB (macOS) |
+| Engine | Bundled Chromium | The one your OS already has (WebKit, WebView2, WebKitGTK) |
+| Works offline | Usually | Always: math, diagrams and code colors are bundled |
 
----
+## Download
 
-## Why this is different from every other Markdown app
+Get the latest installer from [Releases](https://github.com/sarat03/markquill/releases):
 
-| | Typora / Obsidian / Mark Text | VS Code + preview | Finder Quick Look (default) | **MDView** |
-|---|---|---|---|---|
-| Runtime | Electron/Chromium (~150–300 MB) | Electron | Native, but a *different*, plainer renderer than any editor | Native Cocoa + one system `WKWebView` |
-| Quick Look (spacebar) preview | Not supported, or a separate bolted-on extension with its own styling | Not supported | Basic, unstyled, no diagrams/math | **Same renderer, same theme, same fidelity as the full app** |
-| Editing modes | Usually one editing mode | Split-pane preview | View only | **View / Edit (inline WYSIWYG) / Source, live, one shortcut apart** |
-| Diagrams & math | Varies, often plugin-dependent | Plugin-dependent | None | Mermaid, KaTeX, Graphviz, flowchart.js, ECharts, ABC notation, WaveDrom, markmap — bundled, work offline |
-| Editing the app itself | Requires the vendor's build system | N/A | N/A | Edit `web/index.html` in any text editor and reload — it's plain HTML/CSS/JS |
-| Cross-platform story | Ships one binary per OS, separate codebases in practice | Cross-platform by nature (general IDE) | macOS-only, fixed | **One web core designed to be reused by a Windows/Linux shell later — see `App/main.swift`** |
-| Sandbox footprint | Varies | Large, general-purpose editor | N/A | App Sandbox, read-only file access, no network beyond `localhost` |
+| OS | File |
+|---|---|
+| macOS (Apple silicon / Intel) | `MarkQuill_x.y.z_aarch64.dmg` / `MarkQuill_x.y.z_x64.dmg` |
+| Windows 10/11 | `MarkQuill_x.y.z_x64-setup.exe` or `.msi` |
+| Linux | `.AppImage` (any distro) or `.deb` (Debian/Ubuntu) |
 
-The core idea: **native chrome, web content, one source of truth.** Most apps either go full-native (fast, but you re-render Markdown yourself and Quick Look support is an afterthought) or go full-Electron (consistent everywhere, but heavy). MDView instead keeps a *thin* native shell — window, menu, file I/O, print — and puts 100% of the actual product (rendering, editing, settings, diagrams) in a single portable web page that both the main app **and** the Quick Look extension load verbatim.
+The builds are not code-signed yet, so the first launch shows a warning:
+- **macOS:** right-click MarkQuill in Applications → **Open** → **Open**. You only need to do this once.
+- **Windows:** on the SmartScreen prompt, click **More info** → **Run anyway**.
+- **Linux AppImage:** `chmod +x MarkQuill_*.AppImage`, then run it.
 
 ## Features
 
-**Three modes, one keystroke apart**
-- **View** (⌘1) — read-only, select and copy freely, nothing can change
-- **Edit** (⌘2) — inline WYSIWYG editing (Typora-style); type `/` for a block-insert menu, `:` for emoji
-- **Source** (⌘3) — raw Markdown text
+**Read, edit or write source, one shortcut apart**
+- **View** (⌘1): read and copy; nothing can change by accident.
+- **Edit** (⌘2): inline editing like a document. Type `/` on an empty line for the Quick Insert menu (headings, lists, tables, math, diagrams…).
+- **Source** (⌘3): raw Markdown. Writing modes: Standard, Source, Typewriter (caret line stays centred) and Focus (dims everything but the current block).
 
-**Rich rendering**, all bundled locally (works fully offline, including in Quick Look):
-CommonMark + GFM tables/tasks/strikethrough, footnotes, `[toc]`, `==mark==`, `^sup^`/`~sub~`, KaTeX math, YAML front matter, sanitized raw HTML, and fenced-block diagrams — Mermaid (flowchart/sequence/gantt/…), flowchart.js, Graphviz, ECharts, ABC music notation, WaveDrom, markmap.
+**Blocks.** Click the badge in a block's margin (¶, H1…) to duplicate it, turn it into another kind or delete it. Drag the badge to move the block.
 
-**Everything else you'd expect from a real editor:**
-- Multi-tab, multi-window — drag a tab out to spin off a new window, session restored on relaunch
-- Files sidebar for browsing a project folder, `⌘\`
-- Find & replace with regex, per-document
-- Pasted/dropped images auto-saved next to the document (`./assets` or `./images`, never overwritten)
-- Focus mode (dims everything but the current block) and typewriter mode (keeps the caret line centered)
-- Live-editable appearance: theme (light/dark/Material/One Dark or follow system), font, font size, line height, page width, code font/size, tab width, and raw custom CSS — all apply instantly, no restart
-- Configurable auto-save
-- Export to HTML (self-contained, styles inlined), PDF (native print, page size/margins/page numbers), or Markdown; copy as Markdown/HTML/plain/rich text
-- Word/character/paragraph counter
+**Rendering** (all offline): CommonMark and GFM (tables, task lists, strikethrough, autolinks), footnotes, `[toc]`, `==highlight==`, `^sup^` / `~sub~`, YAML front matter, sanitized HTML, KaTeX math, and diagrams: Mermaid (flowchart, sequence, Gantt…), markmap mind maps and flowchart.js.
+
+**Files and tabs**
+- Tabs and windows: drag a tab to reorder it, or out of the window to move it to a new one. Your open files come back on the next launch.
+- Double-click a tab to rename the file on disk.
+- Paste, drop or attach images and files. They are copied into `./assets` (or `./images`) next to the document and never overwrite an existing file.
+- Find & replace, with case-sensitive and regex options.
+- Optional auto-save for files that are already on disk.
+- Line endings and a BOM are kept on save, so a file from Windows stays a Windows file.
+
+**Export and copy.** Export to HTML (self-contained), PDF (paper size, margins and page numbers) or Markdown. Copy as Markdown, rich text, HTML or plain text.
+
+**Appearance.** Auto/light/dark theme; sans, serif or mono text; size, line height and page width; code font, size, tab width and colors (GitHub, VS Code, Red Accent); plus your own CSS. All changes apply live.
+
+### Keyboard shortcuts
+
+On Windows and Linux, use **Ctrl** for ⌘, **Alt** for ⌥ and **Shift** for ⇧. The app shows them that way too.
+
+| Action | Keys | | Action | Keys |
+|---|---|---|---|---|
+| View / Edit / Source | ⌘1 / ⌘2 / ⌘3 | | Open… | ⌘O |
+| Save | ⌘S | | Find & replace | ⌘F |
+| New tab / close tab | ⌘T / ⌘W | | New window | ⌘N |
+| Next / previous tab | Ctrl+Tab / Ctrl+⇧Tab | | Open documents sidebar | ⌘\ |
+| Settings | ⌘, | | Paragraph / Heading 1–6 | ⌥⌘0 / ⌥⌘1–6 |
+| Quote | ⌥⌘Q | | Ordered / bullet / task list | ⌥⇧⌘O / U / X |
+| Duplicate block | ⇧⌘P | | New paragraph / delete block | ⇧⌘N / ⇧⌘D |
 
 ## How it's built
 
+The whole app (UI, editing, settings, export) is **one web page**, `web/index.html`, built on the bundled [Vditor](https://github.com/Vanessa219/vditor) editor. A thin native shell hosts it and does only what a web page can't: file dialogs, reading and writing files, the clipboard, printing and windows.
+
 ```
-App/main.swift               macOS host: WKWebView + native.postMessage bridge (files, dialogs, print, windows)
-QL/PreviewViewController.swift  Quick Look extension — loads the same web/index.html, header hidden
-web/index.html                The entire app: UI, state, modes, settings, export — one file
-web/vditor/                   Bundled editor engine (WYSIWYG/source rendering, diagrams, math)
-build.sh                      Builds build/MDView.app (app + embedded Quick Look .appex), ad-hoc signed
+web/                 The app: index.html (plain HTML/CSS/JS, no framework, no bundler)
+  vditor/            Bundled editor engine: rendering, math, diagrams, code colors
+src-tauri/           Cross-platform shell (Rust + Tauri 2) for macOS, Windows and Linux
+  src/main.rs        The native commands, session restore, file handling
+  tauri.conf.json    App name, identifier, file associations, bundling
+package.json         Tauri CLI scripts: dev, build, icon
+macos/               Mac-only extras (Swift)
+  App/               The original native macOS shell (Cocoa + WKWebView)
+  QuickLook/         Quick Look extension: spacebar in Finder renders with the same page
+  build.sh           Builds build/MarkQuill.app with Quick Look embedded
+.github/workflows/   CI: tests, builds and a launch check on every OS; draft release on tags
 ```
 
-The native layer never touches Markdown, rendering, or app state — it only relays a small command set (`open`, `save`, `asset`, `print`, `tree`, `copy`, `rename`, `newWindow`, …) over `window.webkit.messageHandlers.native`. Anything a browser *can* do (which is nearly everything here) lives entirely in `web/index.html`.
+The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are ten commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change.
 
-## Build & run
+## Build from source
 
-Requires the Xcode command line tools (macOS 13+).
+### Cross-platform app (Tauri)
+
+Needs [Rust](https://rustup.rs) and Node.js 18+. On Linux, also the WebKitGTK dev packages:
 
 ```bash
-./build.sh
-open build/MDView.app
+sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
 ```
 
-This produces `build/MDView.app` with the Quick Look extension (`MDPreview.appex`) embedded and registered — spacebar-preview any `.md` file in Finder afterward to see it in action.
+Then:
+
+```bash
+npm install
+npm run dev
+```
+
+`npm run dev` runs the app. `npm run build` creates installers in `src-tauri/target/release/bundle/`. `cargo test` in `src-tauri/` runs the unit tests. To replace the placeholder icon, run `npm run icon path/to/icon.png`.
+
+### macOS app with Quick Look (Swift)
+
+Needs the Xcode command line tools:
+
+```bash
+macos/build.sh
+open build/MarkQuill.app
+```
+
+This builds `build/MarkQuill.app` with the Quick Look extension embedded. After that, pressing spacebar on a `.md` file in Finder renders it with the same page the app uses. The Tauri build doesn't include Quick Look yet.
+
+### Working on the UI
+
+Edit `web/index.html` and reload. Every shell loads the same file, so a UI change reaches every platform.
+
+## Releasing
+
+Push a version tag. CI then builds every platform and attaches the installers to a draft GitHub release:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
 
 ## License
 
-Application code is unlicensed pending a LICENSE file from the maintainer. The bundled [Vditor](https://github.com/Vanessa219/vditor) editor (`web/vditor/`) is MIT-licensed, © B3log.
+The application code is not licensed yet; a LICENSE file will come from the maintainer. The bundled [Vditor](https://github.com/Vanessa219/vditor) editor (`web/vditor/`) is MIT-licensed, © B3log.
