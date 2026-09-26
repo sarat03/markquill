@@ -30,7 +30,7 @@ Keep that split. If a web page can do something, it belongs in `web/index.html`.
 - Match the surrounding code style. The code is compact and comments explain *why*, not *what*.
 - Don't add a dependency for something a few lines can do. MarkQuill stays small on purpose: the download is about 5–7 MB.
 - If you change the Rust code, run `cargo test` in `src-tauri/`, and add a test for any new logic.
-- Test on the OS you have. CI builds, tests and launches the app on macOS, Windows and Linux for every pull request, so check that it's green.
+- Test on the OS you have. CI builds, tests and launches the app on Linux for every pull request, so check that it's green; macOS and Windows are built for releases.
 - Keyboard shortcuts are written Mac-style (`⌘`, `⌥`, `⇧`) in the page. They become Ctrl, Alt and Shift on Windows and Linux automatically.
 
 ## License
