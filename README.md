@@ -41,6 +41,7 @@ The builds are not code-signed yet, so the first launch shows a warning:
 - Double-click a tab to rename the file on disk.
 - Paste, drop or attach images and files. They are copied into `./assets` (or `./images`) next to the document and never overwrite an existing file.
 - Find & replace, with case-sensitive and regex options.
+- Links: web links open in your browser, links to other Markdown files open in a tab, and links to other files show them in Finder or Explorer.
 - Optional auto-save for files that are already on disk.
 - Line endings and a BOM are kept on save, so a file from Windows stays a Windows file.
 
@@ -118,13 +119,28 @@ Edit `web/index.html` and reload. Every shell loads the same file, so a UI chang
 
 ## Releasing
 
-Push a version tag. CI then builds every platform and attaches the installers to a draft GitHub release:
+1. Set the new version in `src-tauri/Cargo.toml` (`version = "0.2.0"`). It's the only place the version lives, and the installers are named after it.
+2. Merge that change to `main`, then tag it and push the tag:
 
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+
+3. CI checks that the tag matches the version, builds every platform and attaches the installers to a draft release. Check the draft and publish it.
+
+## Contributing
+
+Bug reports, fixes and improvements are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, where things live and what a pull request needs.
+
+## Security
+
+Please report security problems privately, not in a public issue. [SECURITY.md](SECURITY.md) explains how, and what MarkQuill does with your files and the network. In short: no telemetry, no network requests of its own, and HTML in documents is sanitized.
 
 ## License
 
-The application code is not licensed yet; a LICENSE file will come from the maintainer. The bundled [Vditor](https://github.com/Vanessa219/vditor) editor (`web/vditor/`) is MIT-licensed, © B3log.
+MarkQuill is free software, licensed under the [GNU General Public License v3.0](LICENSE). You may use, study, share and modify it; if you distribute a modified version, it must also be under the GPL-3.0 with its source available.
+
+Copyright © 2026 Sarat.
+
+Bundled third-party components keep their own licenses. These include the [Vditor](https://github.com/Vanessa219/vditor) editor (MIT, © B3log) in `web/vditor/`, along with the math, diagram and code-color libraries it ships.

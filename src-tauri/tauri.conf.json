@@ -1,20 +1,53 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "MarkQuill",
-  "version": "0.1.0",
   "identifier": "dev.markquill.app",
-  "build": { "frontendDist": "../web" },
+  "build": {
+    "frontendDist": "../web"
+  },
   "app": {
     "withGlobalTauri": true,
     "windows": [],
-    "security": { "csp": null, "assetProtocol": { "enable": true, "scope": ["**"] } }
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "**"
+        ]
+      }
+    }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "publisher": "Sarat",
+    "copyright": "Copyright © 2026 Sarat. Licensed under GPL-3.0-only.",
+    "license": "GPL-3.0-only",
+    "licenseFile": "../LICENSE",
+    "homepage": "https://github.com/sarat03/markquill",
+    "category": "Productivity",
+    "shortDescription": "Small, fast Markdown viewer and editor",
+    "longDescription": "MarkQuill opens Markdown files in a clean reading view and lets you edit them inline like a document, or as raw Markdown. Math, Mermaid diagrams and code highlighting work offline.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "fileAssociations": [
-      { "ext": ["md", "markdown", "mdown"], "name": "Markdown", "description": "Markdown document", "role": "Editor", "mimeType": "text/markdown" }
+      {
+        "ext": [
+          "md",
+          "markdown",
+          "mdown"
+        ],
+        "name": "Markdown",
+        "description": "Markdown document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      }
     ]
   }
 }
