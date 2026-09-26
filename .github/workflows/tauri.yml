@@ -25,8 +25,11 @@ jobs:
         run: |
           version=$(grep -m1 '^version' src-tauri/Cargo.toml | cut -d '"' -f2)
           [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME doesn't match version $version in src-tauri/Cargo.toml"; exit 1; }
+      # a release that already exists (a re-run, or a tag moved to a fix) just gets its installers replaced below
       - name: Create draft release
-        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "MarkQuill ${GITHUB_REF_NAME#v}" --notes-file .github/release-notes.md --generate-notes
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "MarkQuill ${GITHUB_REF_NAME#v}" --notes-file .github/release-notes.md --generate-notes
 
   build:
     needs: release
