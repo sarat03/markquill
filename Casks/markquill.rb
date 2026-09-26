@@ -14,6 +14,8 @@ cask "markquill" do
   desc "Small, fast Markdown viewer and editor"
   homepage "https://github.com/sarat03/markquill"
 
+  depends_on :macos
+
   app "MarkQuill.app"
 
   caveats <<~EOS
