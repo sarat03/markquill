@@ -1313,7 +1313,24 @@ graph LR
 
 [^1]: Like this one.
 `);
-newTab(QL || FRESH ? {} : {name: 'Welcome.md', value: WELCOME});
+// Welcome on the first launch only; after an update, the release notes (START is set by the Tauri host)
+const START = QL || FRESH ? '' : window.START ?? (window.__TAURI__ ? '' : 'welcome'); // the Swift app and the browser keep the welcome page
+if (START === 'welcome') newTab({name: 'Welcome.md', value: WELCOME, blank: !window.__TAURI__}); // Tauri shows it once: a file opened now goes beside it
+else if (START === 'changelog') whatsNew();
+else newTab();
+async function whatsNew(){
+  newTab({name: "What's new.md", value: "# What's new in MarkQuill\n\nLoading the release notes…\n", blank: false});
+  const t = T(), v = await native.postMessage({cmd: 'version'}), url = `https://github.com/sarat03/markquill/releases/tag/v${v}`;
+  let notes = `See the [release notes](${url}).`;
+  try {
+    const r = await fetch(`https://api.github.com/repos/sarat03/markquill/releases/tags/v${v}`);
+    // only GitHub's generated "What's Changed" list (and its Full Changelog link), not the download table above it
+    const changed = r.ok && (await r.json()).body?.split(/^## What's Changed\s*$/m)[1];
+    if (changed) notes = changed.trim() + `\n\n[Release page](${url})`;
+  } catch {}
+  t.value = `# What's new in MarkQuill ${v}\n\n${notes}\n`;
+  if (tabs.includes(t)) switchTo(tabs.indexOf(t)); // in front of any restored or opened files
+}
 if (!QL && store.get('tree') === 'true') toggleTree();
 </script>
 </body>

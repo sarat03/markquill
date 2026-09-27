@@ -1,0 +1,14 @@
+{
+  "build": {
+    "beforeBuildCommand": "bash macos/build-ql.sh"
+  },
+  "bundle": {
+    "macOS": {
+      "files": {
+        "Resources/Assets.car": "icons/Assets.car",
+        "PlugIns/MarkQuillPreview.appex": "../build/ql/MarkQuillPreview.appex"
+      },
+      "signingIdentity": "-"
+    }
+  }
+}

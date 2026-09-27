@@ -31,6 +31,9 @@ struct Inner {
     quitting: bool,
     next: u32,
     update: Option<(Update, Vec<u8>)>, // downloaded, installed on the user's "Restart now"
+    started: bool,         // setup ran; before that, files macOS hands over (Finder launch) wait in `pending`
+    pending: Vec<PathBuf>,
+    start: String,         // first window's opening tab: "welcome" (first launch), "changelog" (after an update) or ""
 }
 type St = Mutex<Inner>;
 
@@ -142,7 +145,7 @@ fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
         .title("MarkQuill")
         .inner_size(1100.0, 760.0)
         // later windows start with an empty tab instead of the welcome page
-        .initialization_script(if fresh { "window.FRESH = true" } else { "" })
+        .initialization_script(if fresh { "window.FRESH = true".into() } else { format!("window.START = {:?}", std::mem::take(&mut st(app).start)) })
         // the page handles drops itself (tab reordering, block moves, dropped files); Tauri's handler would swallow them
         .disable_drag_drop_handler()
         // backstop for link handling in the page: this window only ever shows the app itself
@@ -166,6 +169,8 @@ fn ask_close(w: &WebviewWindow) {
 
 // Finder / Explorer / a second launch: switch to the tab if it's open anywhere, else open in the front window
 fn open_paths(app: &AppHandle, paths: Vec<PathBuf>) {
+    // a Finder launch delivers its files before setup: setup opens them instead of restoring the session
+    { let mut g = st(app); if !g.started { g.pending.extend(paths); return } }
     for p in paths.iter().map(|p| canon(p)) {
         let key = p.to_string_lossy().into_owned();
         let label = {
@@ -197,6 +202,22 @@ fn load_session(app: &AppHandle) -> Vec<Vec<String>> {
     let saved: Vec<Vec<String>> = session_file(app).and_then(|f| fs::read_to_string(f).ok())
         .and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
     saved.into_iter().map(|w| w.into_iter().filter(|p| Path::new(p).is_file()).collect::<Vec<_>>()).filter(|w| !w.is_empty()).collect()
+}
+
+// Welcome only on the very first launch; after an update, a "What's new" tab. Remembers the version it last ran as.
+fn first_tab(app: &AppHandle, had_session: bool) -> String {
+    let Ok(dir) = app.path().app_config_dir() else { return String::new() };
+    let file = dir.join("version");
+    let cur = app.package_info().version.to_string();
+    let last = fs::read_to_string(&file).ok();
+    let _ = fs::create_dir_all(&dir);
+    let _ = fs::write(&file, &cur);
+    match last {
+        Some(v) if v.trim() == cur => String::new(),
+        Some(_) => "changelog".into(),
+        None if had_session => "changelog".into(), // updated from a version that didn't record itself (0.1.3 and older)
+        None => "welcome".into(),
+    }
 }
 
 // ---- file helpers (stateless apart from line-ending memory: every command carries the path it's about) ----
@@ -395,8 +416,10 @@ fn main() {
         })
         .setup(|app| {
             let h = app.handle();
-            let files: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).filter(|p| p.is_file()).collect();
+            let mut files: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).filter(|p| p.is_file()).collect();
             let session = load_session(h);
+            let start = first_tab(h, !session.is_empty());
+            { let mut g = st(h); g.started = true; g.start = start; files.append(&mut g.pending); }
             if !files.is_empty() {
                 let w = new_window(h, false);
                 files.iter().for_each(|f| open_file(&w, f));
