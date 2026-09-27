@@ -10,6 +10,7 @@ use tauri::{webview::PageLoadEvent, AppHandle, Manager, RunEvent, WebviewUrl, We
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
+use tauri_plugin_updater::{Update, UpdaterExt};
 
 // One window = one page = its own set of tabs.
 #[derive(Default)]
@@ -29,6 +30,7 @@ struct Inner {
     files: BTreeSet<String>,
     quitting: bool,
     next: u32,
+    update: Option<(Update, Vec<u8>)>, // downloaded, installed on the user's "Restart now"
 }
 type St = Mutex<Inner>;
 
@@ -94,9 +96,37 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
         }
         "closeCancelled" => st(app).quitting = false,
         "link" => open_link(&w, &s("href"), &s("doc")),
+        "version" => return json!(app.package_info().version.to_string()),
+        "fetchUpdate" => return json!(fetch_update(app).await.ok().flatten()), // background download; replies with its version
+        "installUpdate" => {
+            if st(app).wins.values().any(|v| v.dirty) { alert(&w, "Save your documents first, then restart to update."); return json!(false) }
+            if let Err(e) = install_update(app).await { alert(&w, &format!("Couldn't update: {e}")); return json!(false) }
+        }
         _ => {}
     }
     Value::Null
+}
+
+// ---- updates (macOS and Windows; the Linux .deb/.rpm update through the package manager) ----
+// The updater checks latest.json on the newest GitHub release and verifies each download against the pubkey in tauri.conf.json.
+async fn download_update(app: &AppHandle) -> Result<Option<(Update, Vec<u8>)>, String> {
+    let Some(u) = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())? else { return Ok(None) };
+    let bytes = u.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    Ok(Some((u, bytes)))
+}
+async fn fetch_update(app: &AppHandle) -> Result<Option<String>, String> {
+    let have = st(app).update.as_ref().map(|(u, _)| u.version.clone());
+    if have.is_some() { return Ok(have) }
+    let Some(got) = download_update(app).await? else { return Ok(None) };
+    let v = got.0.version.clone();
+    st(app).update = Some(got);
+    Ok(Some(v))
+}
+async fn install_update(app: &AppHandle) -> Result<(), String> {
+    let pending = st(app).update.take();
+    let (u, bytes) = match pending { Some(p) => p, None => download_update(app).await?.ok_or("MarkQuill is up to date.")? };
+    u.install(bytes).map_err(|e| e.to_string())?;
+    app.restart()
 }
 
 // ---- windows ----
@@ -331,6 +361,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(St::default())
         .invoke_handler(tauri::generate_handler![native])
         .on_page_load(|w, p| {

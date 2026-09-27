@@ -3,9 +3,9 @@
 #   brew install --cask markquill
 # The release job checks this version matches src-tauri/Cargo.toml.
 cask "markquill" do
-  arch arm: "mac_m_arm", intel: "mac_intelx64"
+  arch arm: "mac-m-arm", intel: "mac-intel-x64"
 
-  version "0.1.2"
+  version "0.1.3"
   # ponytail: no checksum, so a release only bumps the version; pin sha256 per arch before submitting to homebrew/cask
   sha256 :no_check
 

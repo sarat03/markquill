@@ -180,6 +180,7 @@ body:not(.read) #find{top:52px} /* below the formatting toolbar */
 
 /* settings panel */
 #settings .scroll{flex:1;overflow:auto;padding:4px 16px 24px}
+#gear{position:relative}#gear.dot::after{content:'';position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
 #settings h3{margin:20px 0 10px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
 .field{display:block;margin-bottom:14px}
 .fl{display:flex;justify-content:space-between;margin-bottom:6px}
@@ -367,6 +368,12 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
 
       <h3>Custom CSS</h3>
       <textarea data-k="css" rows="5" placeholder="#doc h1 { color: tomato }" aria-label="Custom CSS"></textarea>
+
+      <div id="about" hidden>
+        <h3>About</h3>
+        <div class="field"><div class="fl"><span>MarkQuill <span id="ver"></span></span><button id="upd">Check for updates</button></div><small id="updMsg" aria-live="polite"></small></div>
+        <label class="toggle" id="autoRow"><span>Install updates automatically<small>Downloads new versions in the background; restart when it's ready</small></span><input type="checkbox" class="switch" data-k="autoupdate"></label>
+      </div>
     </div>
   </aside>
 </div>
@@ -492,7 +499,7 @@ function createEditor(kind){
     hint: {emoji: {}}, // no ":" emoji picker; "/" is the Quick Insert palette below
     upload: {multiple: true, handler: saveAssets},
     input: v => changed(v, tab),
-    after: () => { ready = true; editor.focus(); },
+    after: () => { ready = true; editor.focus(); restoreScroll(); },
   });
 }
 // the code block language picker: common languages first, then the rest highlight.js knows (once it has loaded); no diagram types
@@ -787,10 +794,63 @@ async function saveAssets(files){
   return null;
 }
 
+// ---- updates: compare with the latest GitHub release and link to its installers ----
+// ponytail: opens the release page instead of installing in place; self-install needs tauri-plugin-updater + signed builds
+if (window.__TAURI__ && !QL) native.postMessage({cmd: 'version'}).then(v => { $('#ver').textContent = 'v' + v; $('#about').hidden = false; checkUpdate(true); });
+const newer = (a, b) => { a = a.split('.').map(Number); b = b.split('.').map(Number); for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return false; };
+// checked quietly at launch; a newer release puts a dot on the settings button and a notice in About.
+// macOS/Windows install in place (the host verifies the download's signature); Linux packages link to the release page.
+const canInstall = OS !== 'linux';
+$('#autoRow').hidden = !canInstall;
+async function installUpdate(){
+  $('#updMsg').textContent = 'Downloading and installing…';
+  if (await native.postMessage({cmd: 'installUpdate'}) === false) $('#updMsg').textContent = 'Update not installed.';
+}
+async function checkUpdate(quiet){
+  const msg = $('#updMsg'), btn = $('#upd'), cur = $('#ver').textContent.slice(1);
+  if (!quiet) msg.textContent = 'Checking…';
+  try {
+    const r = await fetch('https://api.github.com/repos/sarat03/markquill/releases/latest');
+    if (!r.ok) throw 0;
+    const {tag_name, html_url} = await r.json(), latest = tag_name.replace(/^v/, '');
+    if (!newer(latest, cur)) { if (!quiet) msg.textContent = 'You have the latest version.'; return; }
+    $('#gear').classList.add('dot'); $('#gear').setAttribute('aria-label', 'Settings (update available)');
+    btn.classList.add('on');
+    msg.innerHTML = `<b>New update:</b> version ${esc(latest)} is available.`;
+    if (!canInstall) { btn.textContent = 'Download'; btn.onclick = () => native.postMessage({cmd: 'link', href: html_url, doc: ''}); return; }
+    btn.textContent = 'Install and restart'; btn.onclick = installUpdate;
+    if (opt('autoupdate') === 'true' && await native.postMessage({cmd: 'fetchUpdate'})) {
+      msg.innerHTML = `<b>New update:</b> version ${esc(latest)} is downloaded. Restart to finish.`;
+      btn.textContent = 'Restart now';
+    }
+  } catch { if (!quiet) msg.textContent = 'Couldn\u2019t check for updates. Are you online?'; }
+}
+$('#upd').onclick = () => checkUpdate(false);
+
 // ---- modes ----
-async function setMode(m){
+// keep the reading position across View/Edit/Source: anchor on the top-level block at the top of the window
+// (View and Edit render the same block list); Source has no blocks, so it falls back to the scroll fraction
+let readPos = {frac: 0};
+const scroller = () => mode === 'read' ? $('#out') : ready && editor.vditor[editor.getCurrentMode()]?.element;
+const blocksOf = () => mode === 'read' ? $('#doc').children : mode === 'edit' && ready ? editor.vditor.ir.element.children : null;
+function savePlace(){
+  const s = scroller(); if (!s) return {frac: 0};
+  const p = {frac: s.scrollTop / (s.scrollHeight - s.clientHeight) || 0}, b = blocksOf(), top = s.getBoundingClientRect().top;
+  if (b) for (let i = 0; i < b.length; i++) {
+    const r = b[i].getBoundingClientRect();
+    if (r.bottom > top) { Object.assign(p, {i, n: b.length, off: r.height ? (top - r.top) / r.height : 0}); break; }
+  }
+  return p;
+}
+function restoreScroll(){
+  const s = scroller(), b = blocksOf(); if (!s) return;
+  if (b && readPos.n === b.length) { const r = b[readPos.i].getBoundingClientRect(); s.scrollTop += r.top - s.getBoundingClientRect().top + readPos.off * r.height; }
+  else s.scrollTop = readPos.frac * (s.scrollHeight - s.clientHeight);
+}
+async function setMode(m, keepPlace = true){
   if (QL) m = 'read';
   else if (m !== 'read') m = writing() === 'source' ? 'source' : 'edit';
+  readPos = keepPlace ? savePlace() : {frac: 0};
   commit();
   mode = m; block = null; placeBlockBtn(); closeSlash();
   for (const c of ['read', 'edit', 'source']) document.body.classList.toggle(c, c === m);
@@ -798,7 +858,7 @@ async function setMode(m){
   for (const [id, on] of [['#mRead', m === 'read'], ['#mEdit', m !== 'read']]) {
     $(id).classList.toggle('on', on); $(id).setAttribute('aria-pressed', on);
   }
-  if (m === 'read') { editorTab = null; await renderView(); } else createEditor(m === 'edit' ? 'ir' : 'sv');
+  if (m === 'read') { editorTab = null; await renderView(); restoreScroll(); } else createEditor(m === 'edit' ? 'ir' : 'sv');
 }
 $('#mRead').onclick = () => setMode('read');
 $('#mEdit').onclick = () => setMode('edit');
@@ -818,7 +878,7 @@ function switchTo(i){
   commit();
   active = Math.max(0, Math.min(i, tabs.length - 1));
   syncChrome();
-  setMode(mode);
+  setMode(mode, false);
 }
 const pristine = t => t && t.blank && !t.dirty; // an untouched new/welcome tab
 // Called by the host (and by drag-and-drop / Open) with a file's contents. Reuses the tab if the file is already open.
