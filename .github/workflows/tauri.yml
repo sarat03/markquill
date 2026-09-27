@@ -7,8 +7,9 @@
 #   2. Merge that to main. Optionally run this workflow on main by hand first to build every OS. Then tag it:  git tag v0.2.0 && git push origin v0.2.0
 #   3. The tag run checks it matches the version, creates one draft release (notes from
 #      .github/release-notes.md plus merged PRs) and attaches every installer. Check the draft, then publish.
-#   4. winget: the first time, submit with  wingetcreate new <win-x64-setup.exe url> <win-arm-setup.exe url>
-#      (package id Sarat.MarkQuill). After that:  wingetcreate update Sarat.MarkQuill -v 0.2.0 -u <same two urls> --submit
+#   4. winget (package id Sarat.MarkQuill, first submitted with 0.1.3), from any OS with komac (brew install komac):
+#      GITHUB_TOKEN=$(gh auth token) komac update Sarat.MarkQuill -v 0.2.0 -u <win-x64-setup.exe url> <win-arm-setup.exe url> --submit
+#      Check the ARM installer is listed as arm64 in the PR (komac has guessed arm).
 name: Tauri
 
 on:
