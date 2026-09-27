@@ -36,7 +36,7 @@ winget install Sarat.MarkQuill
 **Linux**, Debian, Ubuntu or Mint:
 
 ```bash
-curl -fL "$(curl -s https://api.github.com/repos/sarat03/markquill/releases/latest | grep -o 'https://[^"]*_amd64\.deb')" -o /tmp/markquill.deb && sudo apt install /tmp/markquill.deb
+curl -fL "$(curl -s https://api.github.com/repos/sarat03/markquill/releases/latest | grep -o 'https://[^"]*amd64\.deb')" -o /tmp/markquill.deb && sudo apt install /tmp/markquill.deb
 ```
 
 **Linux**, Fedora:
@@ -49,12 +49,12 @@ Or get the installer from [Releases](https://github.com/sarat03/markquill/releas
 
 | OS | File |
 |---|---|
-| macOS, Apple silicon (M1 and later) | `MarkQuill_x.y.z_mac_m_arm.dmg` |
-| macOS, Intel | `MarkQuill_x.y.z_mac_intelx64.dmg` |
+| macOS, Apple silicon (M1 and later) | `MarkQuill_x.y.z_mac-m-arm.dmg` |
+| macOS, Intel | `MarkQuill_x.y.z_mac-intel-x64.dmg` |
 | Windows 10/11, x64 | `MarkQuill_x.y.z_win-x64-setup.exe` or `MarkQuill_x.y.z_win-x64.msi` |
 | Windows 11, ARM | `MarkQuill_x.y.z_win-arm-setup.exe` |
-| Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_x.y.z_amd64.deb` |
-| Linux: Fedora | `MarkQuill-x.y.z-1.x86_64.rpm` |
+| Linux: Debian 12+, Ubuntu 22.04+, Mint 21+ | `MarkQuill_x.y.z_linux-amd64.deb` |
+| Linux: Fedora | `MarkQuill_x.y.z_linux-x86_64.rpm` |
 
 The builds are not code-signed yet, so the first launch shows a warning:
 - **macOS:** open MarkQuill once; macOS blocks it. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only need to do this once. If macOS says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/MarkQuill.app` in Terminal, then open it again.
