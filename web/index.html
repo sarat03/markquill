@@ -796,7 +796,7 @@ async function saveAssets(files){
 
 // ---- updates: compare with the latest GitHub release and link to its installers ----
 // ponytail: opens the release page instead of installing in place; self-install needs tauri-plugin-updater + signed builds
-if (window.__TAURI__ && !QL) native.postMessage({cmd: 'version'}).then(v => { $('#ver').textContent = 'v' + v; $('#about').hidden = false; checkUpdate(true); });
+if (window.__TAURI__ && !QL) native.postMessage({cmd: 'version'}).then(v => { $('#ver').textContent = 'v' + v; $('#about').hidden = false; if (!FRESH) checkUpdate(true); }); // launch check: first window only (later windows can Check by hand)
 const newer = (a, b) => { a = a.split('.').map(Number); b = b.split('.').map(Number); for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return false; };
 // checked quietly at launch; a newer release puts a dot on the settings button and a notice in About.
 // macOS/Windows install in place (the host verifies the download's signature); Linux packages link to the release page.
