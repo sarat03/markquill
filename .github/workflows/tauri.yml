@@ -161,3 +161,5 @@ jobs:
           } | jq -s --arg v "$v" '{version: $v, pub_date: (now | todate), platforms: add}' > latest.json
           cat latest.json
           gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" latest.json --clobber
+          # the signatures now live in latest.json; drop the .sig files so the release lists only what people download
+          for f in sigs/*.sig; do gh release delete-asset "$GITHUB_REF_NAME" "$(basename "$f")" -R "$GITHUB_REPOSITORY" -y; done
