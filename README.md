@@ -2,7 +2,7 @@
 
 **A small, fast Markdown viewer and editor for macOS, Windows and Linux.**
 
-MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so the download is only about **5 MB** on Windows and Linux and **7 MB** on macOS.
+MarkQuill opens `.md` files in a clean reading view and lets you edit them inline like a document, or as raw Markdown, one shortcut apart. It uses your system's own web engine instead of bundling a browser, so the download is only about **5 MB** on Windows and Linux and **11 MB** on macOS (Quick Look included).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
@@ -11,9 +11,10 @@ MarkQuill opens `.md` files in a clean reading view and lets you edit them inlin
 
 | | Typical Electron editor | **MarkQuill** |
 |---|---|---|
-| Download | Usually 80 MB or more | 5–7 MB |
+| Download | Usually 80 MB or more | 5–11 MB |
 | Engine | Bundled Chromium | The one your OS already has (WebKit, WebView2, WebKitGTK) |
 | Works offline | Usually | Always: math, diagrams and code colors are bundled |
+| Quick Look (macOS) | Rarely | Press Space on a `.md` file in Finder to see it rendered |
 
 ## Download
 
@@ -63,6 +64,8 @@ The builds are not code-signed yet, so the first launch shows a warning:
 
 ## Features
 
+**Quick Look on macOS.** Select a Markdown file in Finder and press Space: it renders with the same page as View mode (math, diagrams, highlighted code), without opening the app. It comes with the app; open MarkQuill once after installing so macOS picks it up.
+
 **Read, edit or write source, one shortcut apart**
 - **View** (⌘1): read and copy; nothing can change by accident.
 - **Edit** (⌘2): inline editing like a document. Type `/` on an empty line for the Quick Insert menu (headings, lists, tables, math, diagrams…).
@@ -110,17 +113,19 @@ web/                 The app: index.html (plain HTML/CSS/JS, no framework, no bu
   vditor/            Bundled editor engine: rendering, math, diagrams, code colors
 src-tauri/           Cross-platform shell (Rust + Tauri 2) for macOS, Windows and Linux
   src/main.rs        The native commands, session restore, file handling
-  tauri.conf.json    App name, identifier, file associations, bundling
+  tauri.conf.json    App name, identifier, file associations, bundling, updater
+  tauri.macos.conf.json  macOS only: bundles the Quick Look extension, ad-hoc signs the app
   icons/source/      App icon: SVG sources and build-icons.sh (light and dark on macOS)
 package.json         Tauri CLI scripts: dev, build
 macos/               Mac-only extras (Swift)
   App/               The original native macOS shell (Cocoa + WKWebView)
   QuickLook/         Quick Look extension: spacebar in Finder renders with the same page
+  build-ql.sh        Builds the Quick Look extension (used by the Tauri build and build.sh)
   build.sh           Builds build/MarkQuill.app with Quick Look embedded
 .github/workflows/   CI: tests, build and launch check (Linux per pull request, every OS per release)
 ```
 
-The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change.
+The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change. The Tauri shell also answers `version`, `fetchUpdate` and `installUpdate` for in-app updates; the page only uses them when it runs in Tauri.
 
 ## Build from source
 
@@ -150,7 +155,7 @@ macos/build.sh
 open build/MarkQuill.app
 ```
 
-This builds `build/MarkQuill.app` with the Quick Look extension embedded. After that, pressing spacebar on a `.md` file in Finder renders it with the same page the app uses. The Tauri build doesn't include Quick Look yet.
+This builds `build/MarkQuill.app` with the Quick Look extension embedded. After that, pressing spacebar on a `.md` file in Finder renders it with the same page the app uses. The Tauri build (`npm run build` on a Mac) embeds the same extension.
 
 ### Working on the UI
 
