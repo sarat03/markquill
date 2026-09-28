@@ -84,7 +84,7 @@ The builds are not code-signed yet, so the first launch shows a warning:
 - Optional auto-save for files that are already on disk.
 - Line endings and a BOM are kept on save, so a file from Windows stays a Windows file.
 
-**Export and copy.** Export to HTML (self-contained), PDF (through the system print dialog) or Markdown. Copy as Markdown, rich text, HTML or plain text.
+**Export and copy.** Export to HTML (self-contained), PDF or Markdown. PDF export shows the pages as they'll print: pick the paper size (A4, Letter, Legal, A3, A5), orientation, margins, font size, line height, a header and page numbers. The PDF is saved directly, always in light colors. Copy as Markdown, rich text, HTML or plain text.
 
 **Appearance.** Auto/light/dark theme; sans, serif or mono text; size, line height and page width; code font, size, tab width and colors (GitHub, VS Code, Red Accent); plus your own CSS. All changes apply live.
 
@@ -125,7 +125,7 @@ macos/               Mac-only extras (Swift)
 .github/workflows/   CI: tests, build and launch check (Linux per pull request, every OS per release)
 ```
 
-The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change. The Tauri shell also answers `version`, `fetchUpdate` and `installUpdate` for in-app updates; the page only uses them when it runs in Tauri.
+The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change. The Tauri shell also answers `version`, `fetchUpdate` and `installUpdate` for in-app updates, and `pdf`, which writes the page boxes straight to a PDF file; the page only uses them when it runs in Tauri.
 
 ## Build from source
 

@@ -120,7 +120,7 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
             if !s("html").isEmpty { pb.setString(s("html"), forType: .html) }
             pb.setString(s("text"), forType: .string)
         case "print":
-            printDoc(paper: s("paper"), marginMM: Double(s("margin")) ?? 18, numbers: s("numbers") == "true")
+            printDoc(widthMM: b["w"] as? Double ?? 210, heightMM: b["h"] as? Double ?? 297)
         case "newWindow": // optionally carrying a tab moved out of this window
             let d = app.newDoc(fresh: true)
             if !s("name").isEmpty { d.load([s("name"), s("text"), s("base"), s("path"), b["dirty"] as? Bool ?? false]) }
@@ -134,12 +134,12 @@ final class Doc: NSObject, NSWindowDelegate, WKScriptMessageHandlerWithReply, WK
         reply(nil, nil)
     }
 
-    func printDoc(paper: String, marginMM: Double, numbers: Bool) {
+    // the page lays out its own page boxes (margins, header, footer included): each one fills a sheet of this size
+    func printDoc(widthMM: Double, heightMM: Double) {
         let info = NSPrintInfo.shared.copy() as! NSPrintInfo
-        info.paperSize = paper == "letter" ? NSSize(width: 612, height: 792) : NSSize(width: 595.28, height: 841.89)
-        let m = marginMM * 72 / 25.4
-        (info.topMargin, info.bottomMargin, info.leftMargin, info.rightMargin) = (m, m, m, m)
-        info.dictionary()[NSPrintInfo.AttributeKey.headerAndFooter] = numbers // title + page numbers
+        info.paperSize = NSSize(width: widthMM * 72 / 25.4, height: heightMM * 72 / 25.4)
+        (info.topMargin, info.bottomMargin, info.leftMargin, info.rightMargin) = (0, 0, 0, 0)
+        info.dictionary()[NSPrintInfo.AttributeKey.headerAndFooter] = false
         let op = web.printOperation(with: info)
         op.view?.frame = web.bounds // ponytail: without a frame WKWebView prints blank pages
         op.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)

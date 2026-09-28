@@ -2230,8 +2230,10 @@ name = "markquill"
 version = "0.1.4"
 dependencies = [
  "base64 0.22.1",
+ "gtk",
  "objc2-app-kit",
  "objc2-foundation",
+ "objc2-web-kit",
  "serde_json",
  "tauri",
  "tauri-build",
@@ -2240,6 +2242,9 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "webkit2gtk",
+ "webview2-com",
+ "windows-core 0.61.2",
 ]
 
 [[package]]
