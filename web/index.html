@@ -106,6 +106,10 @@ body.read #editor,body.edit #out,body.source #out{display:none}
 :root[data-code=red]{--code-bg:#f7f6f3;--code-fg:#37352f;--icode-bg:#87837826;--icode-fg:#eb5757}
 :root[data-code=red][data-theme=dark]{--code-bg:#252525;--code-fg:#e6e6e6;--icode-bg:#87837826;--icode-fg:#ff7369}
 #doc pre code,.vditor-reset pre code,.vditor-sv{font-size:var(--code-size)!important}
+/* tables fit the column and wrap their cells instead of scrolling sideways, on screen and on paper (!important: Vditor's theme loads later).
+   break-word, not anywhere: anywhere lets a narrow column shrink to one letter per line */
+.vditor-reset table{display:table!important;overflow:visible!important;width:auto!important;max-width:100%}
+.vditor-reset td,.vditor-reset th,.vditor-reset td code,.vditor-reset th code{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important}
 #doc{max-width:var(--width);margin:0 auto;padding:0}
 /* empty document */
 #empty{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:60%;text-align:center;color:var(--mute);font-size:14px}
@@ -137,9 +141,9 @@ body.empty #empty{display:flex}body.empty #doc{display:none}
 /* the scroller spans the full width (scrollbar at the window edge); padding centres the text column */
 .vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:none;margin:0!important;padding:40px max(var(--gutter), calc((100% - var(--width)) / 2)) 30vh!important}
 .vditor-sv{max-width:none;margin:0!important;padding:48px max(var(--gutter), calc((100% - var(--width)) / 2)) 30vh!important;color:var(--fg)!important;background:var(--bg)!important}
-/* Settings › Alignment: Left pins the text column to the left edge instead of centring it */
-body.left #doc{margin:0}
-body.left .vditor-ir .vditor-reset,body.left .vditor-wysiwyg .vditor-reset,body.left .vditor-sv{padding-left:var(--gutter)!important;padding-right:max(var(--gutter), calc(100% - var(--width) - var(--gutter)))!important}
+/* Settings › Alignment: Left fills the whole window (Page width only applies when centred) */
+body.left #doc{margin:0;max-width:none}
+body.left .vditor-ir .vditor-reset,body.left .vditor-wysiwyg .vditor-reset,body.left .vditor-sv{padding-left:var(--gutter)!important;padding-right:var(--gutter)!important}
 .vditor-outline{background:var(--panel)!important}
 /* focus mode: dim every block except the one holding the caret */
 body.focus .vditor-reset>*{opacity:.25;transition:opacity .15s}
@@ -246,7 +250,15 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min
   .actions .sep{margin:0 2px}
 }
 body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{display:none!important}
-@media print{#side,#bar,#status,#settings,#find,#editor,#empty,.menu{display:none!important}body,.app{height:auto;overflow:visible;display:block}#out{position:static;overflow:visible;display:block!important;padding:0}}
+@media print{#side,#bar,#tTree,#status,#settings,#find,#editor,#empty,.menu{display:none!important}body,.app{height:auto;overflow:visible;display:block}#out{position:static;overflow:visible;display:block!important;padding:0}
+/* the paper sets the width: Page width (760px) is wider than A4 (~658px inside 18mm margins) and cut off the right edge */
+#doc{max-width:none!important;margin:0!important;padding:0 1px!important} /* 1px: a full-width table's outer border sits half outside and got clipped */
+/* paper can't scroll: code blocks wrap instead of running off the page (tables already wrap, see above) */
+.vditor-reset pre>code{white-space:pre-wrap!important;overflow-wrap:anywhere!important;overflow:visible!important}
+/* page breaks: headings stay with the text after them; rows, code, images, diagrams and quotes aren't split across pages; table headers repeat */
+.vditor-reset :is(h1,h2,h3,h4,h5,h6){break-after:avoid}
+.vditor-reset :is(tr,pre,img,svg,blockquote,.language-mermaid,.language-math){break-inside:avoid}
+.vditor-reset thead{display:table-header-group}}
 </style>
 <style id="userCss"></style>
 </head>
@@ -1211,14 +1223,24 @@ $('#fall').onclick = () => {
 };
 
 // ---- export & copy (renders the View first so diagrams/math are included) ----
+// export file name: front matter `title:`, else the first heading, else the file's own name
+// ponytail: a `# …` line inside a code fence counts as a heading; parse the document if that ever matters
+function exportName(t){
+  const fm = t.value.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1].match(/^title:\s*(.+)$/m)?.[1];
+  const h = fm || t.value.match(/^ {0,3}#{1,6}[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/m)?.[1];
+  const s = (h || '').replace(/^["']|["']$/g, '').replace(/[*_`~=[\]]|<[^>]*>/g, '').replace(/[\\/:*?"<>|\x00-\x1f]/g, '-').trim().slice(0, 100);
+  return s || t.name.replace(/\.\w+$/, '');
+}
 async function exportAs(v){
   commit();
-  const t = T(), name = t.name.replace(/\.\w+$/, '');
+  const t = T(), name = exportName(t);
   if (v === 'md') return download(name + '.md', t.value, 'text/markdown');
   if (v === 'c-md') return copy({text: t.value});
+  const was = mode;
   if (mode !== 'read') await setMode('read');
   const html = $('#doc').innerHTML;
-  if (v === 'pdf') native ? native.postMessage({cmd: 'print', paper: opt('paper') || 'a4', margin: opt('margin'), numbers: opt('pagenums')}) : print();
+  // PDF stays in the View: the native print sheet renders the page after this returns
+  if (v === 'pdf') return native ? native.postMessage({cmd: 'print', name, paper: opt('paper') || 'a4', margin: opt('margin'), numbers: opt('pagenums')}) : print();
   if (v === 'html') {
     let css = '';
     for (const s of document.styleSheets) try { css += [...s.cssRules].map(r => r.cssText).join('\n'); } catch {}
@@ -1227,6 +1249,7 @@ async function exportAs(v){
   if (v === 'c-html') copy({text: html});
   if (v === 'c-text') copy({text: $('#doc').innerText});
   if (v === 'c-rich') copy({html, text: $('#doc').innerText});
+  if (was !== 'read') setMode(was); // HTML export and copies don't kick you out of editing
 }
 $('#export').onclick = e => {
   if ($('#export').getAttribute('aria-expanded') === 'true') return hideMenu();
@@ -1256,7 +1279,7 @@ document.querySelectorAll('#settings [data-k]').forEach(el => {
     if (out) out.textContent = v + u;
     if (k === 'theme') document.documentElement.dataset.theme = themeName();
     else if (k === 'css') $('#userCss').textContent = v;
-    else if (k === 'align') document.body.classList.toggle('left', v === 'left');
+    else if (k === 'align') { document.body.classList.toggle('left', v === 'left'); $('[data-k=width]').disabled = v === 'left'; }
     else if (k === 'code-colors') document.documentElement.dataset.code = v;
     else if (['font', 'size', 'lh', 'width', 'code-font', 'code-size', 'tab'].includes(k)) document.documentElement.style.setProperty('--' + k, v + u);
     // theme, code colors and outline need a re-render. Everything else is CSS and updates instantly.

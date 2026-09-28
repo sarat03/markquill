@@ -1,4 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+// dev builds are named differently so they can run beside the installed app
+const APP_NAME: &str = if cfg!(debug_assertions) { "MarkQuill_dev" } else { "MarkQuill" };
 // Tauri host for Windows and Linux (also runs on macOS). Same contract as macos/App/main.swift: the app lives in
 // web/index.html and this file only answers the page's `native.postMessage({cmd, ...})`, which arrives here as
 // the single `native` command, for what a web page can't do: files, dialogs, clipboard, printing and windows.
@@ -48,7 +51,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
     match s("cmd").as_str() {
         "state" => {
             let dirty = msg["dirty"].as_bool().unwrap_or(false);
-            let title = if s("title").is_empty() { "MarkQuill".into() } else { s("title") };
+            let title = if s("title").is_empty() { APP_NAME.into() } else { s("title") };
             let _ = w.set_title(&format!("{title}{}", if dirty { " •" } else { "" }));
             if let Some(win) = st(app).wins.get_mut(w.label()) {
                 win.dirty = dirty;
@@ -83,7 +86,19 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
             let nums = if s("numbers") == "true" { "@bottom-center{content:counter(page)}" } else { "" };
             let css = json!(format!("@page{{size:{size};margin:{margin}mm;{nums}}}"));
             let _ = w.eval(&format!("(document.getElementById('pageCss') || document.head.appendChild(Object.assign(document.createElement('style'), {{id: 'pageCss'}}))).textContent = {css}"));
+            // WebKit ignores `@page size`, so on macOS the paper goes on the print info the dialog opens with (as MarkText passes pageSize to printToPDF)
+            #[cfg(target_os = "macos")]
+            {
+                let (pw, ph) = if size == "letter" { (612.0, 792.0) } else { (595.28, 841.89) }; // points
+                let _ = w.run_on_main_thread(move || {
+                    objc2_app_kit::NSPrintInfo::sharedPrintInfo().setPaperSize(objc2_foundation::NSSize::new(pw, ph));
+                });
+            }
+            // the print dialog names the PDF after the window title: show the export name while it opens
+            let title = w.title().unwrap_or_default();
+            if !s("name").is_empty() { let _ = w.set_title(&s("name")); }
             let _ = w.print();
+            let _ = w.set_title(&title);
         }
         "newWindow" => { // optionally carrying a tab moved out of this window
             let d = new_window(app, true);
@@ -142,7 +157,7 @@ fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
         l
     };
     WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
-        .title("MarkQuill")
+        .title(APP_NAME)
         .inner_size(1100.0, 760.0)
         // later windows start with an empty tab instead of the welcome page
         .initialization_script(if fresh { "window.FRESH = true".into() } else { format!("window.START = {:?}", std::mem::take(&mut st(app).start)) })
