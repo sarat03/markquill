@@ -827,7 +827,7 @@ document.addEventListener('input', () => {
   if (m) return openSlash(el, m[1]);
   // mid-line: "/" after a space (or at the start of a text run), inline items only
   const s = getSelection(), n = s.anchorNode, o = s.anchorOffset;
-  const mm = el && s.isCollapsed && n?.nodeType === 3 && !n.parentElement.closest('pre, code, .vditor-ir__marker') && n.data.slice(0, o).match(/(?:^|\s)\/([^\/\s]{0,30})$/);
+  const mm = el && s.isCollapsed && n?.nodeType === 3 && !el.contains(n.parentElement.closest('pre, code, .vditor-ir__marker')) && n.data.slice(0, o).match(/(?:^|\s)\/([^\/\s]{0,30})$/);
   mm ? openSlash(el, mm[1], {n, start: o - mm[1].length - 1, end: o}) : closeSlash();
 });
 function openSlash(el, q, at){
