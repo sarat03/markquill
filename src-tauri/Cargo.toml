@@ -1,6 +1,6 @@
 [package]
 name = "markquill"
-version = "0.1.5" # the app version; to release, see the top of .github/workflows/tauri.yml
+version = "0.1.6" # the app version; to release, see the top of .github/workflows/tauri.yml
 edition = "2021"
 description = "Small, fast Markdown viewer and editor"
 license = "GPL-3.0-only"

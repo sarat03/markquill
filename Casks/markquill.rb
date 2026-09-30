@@ -5,7 +5,7 @@
 cask "markquill" do
   arch arm: "mac-m-arm", intel: "mac-intel-x64"
 
-  version "0.1.5"
+  version "0.1.6"
   # ponytail: no checksum, so a release only bumps the version; pin sha256 per arch before submitting to homebrew/cask
   sha256 :no_check
 
