@@ -71,6 +71,10 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
             }
             return match save_panel(&w, &s("name")) { Some(p) if write(&w, &s("data"), &p) => { allow(app, &p); info(&p) } _ => json!(false) };
         }
+        // live reload: the page polls the file's modified time and, on "Refresh", reads it again
+        "mtime" if known(app, &s("path")) => return json!(fs::metadata(s("path")).and_then(|m| m.modified()).ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_millis() as u64)),
+        "reload" if known(app, &s("path")) => return json!(read_md(app, Path::new(&s("path")))),
         "rename" if known(app, &s("path")) => return rename(app, &s("path"), &s("name")),
         "rename" => return err("MarkQuill only renames files you opened or chose."),
         "asset" if !s("doc").is_empty() && !known(app, &s("doc")) => return err("MarkQuill only adds attachments next to files you opened or chose."),
@@ -349,14 +353,18 @@ fn info(p: &Path) -> Value {
 fn open_file(w: &WebviewWindow, p: &Path) {
     let p = canon(p);
     let name = p.file_name().unwrap_or_default().to_string_lossy().into_owned();
-    let Some(text) = fs::read(&p).ok().and_then(|b| String::from_utf8(b).ok()) else {
+    let Some(text) = read_md(w.app_handle(), &p) else {
         return alert(w, &format!("Couldn't read {name} as UTF-8 text."));
     };
-    let (text, format) = decode(&text);
-    st(w.app_handle()).formats.insert(p.to_string_lossy().into_owned(), format);
     allow(w.app_handle(), &p);
     let i = info(&p);
     load(w, json!([i["name"], text, i["base"], i["path"], false]));
+}
+
+fn read_md(app: &AppHandle, p: &Path) -> Option<String> {
+    let (text, format) = decode(&String::from_utf8(fs::read(p).ok()?).ok()?);
+    st(app).formats.insert(p.to_string_lossy().into_owned(), format);
+    Some(text)
 }
 
 // The page works in LF without a BOM; remember what the file had so saving doesn't rewrite every line.

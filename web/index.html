@@ -112,6 +112,8 @@ body.read #editor,body.edit #out,body.source #out{display:none}
 .vditor-reset td,.vditor-reset th,.vditor-reset td code,.vditor-reset th code{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important}
 #doc{max-width:var(--width);margin:0 auto;padding:0}
 /* empty document */
+#stale{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:9px;background:var(--raised);color:var(--fg);box-shadow:var(--shadow);font-size:13px}
+#stale[hidden]{display:none}#stale button{border:0;border-radius:6px;padding:5px 10px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
 #empty{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:60%;text-align:center;color:var(--mute);font-size:14px}
 #empty>svg{width:44px;height:44px;stroke-width:1.2;margin-bottom:8px;opacity:.7}
 #empty h2{margin:0;font-size:18px;font-weight:600;color:var(--fg)}#empty p{margin:0 0 14px}
@@ -438,6 +440,7 @@ body>#sheets{display:none}
 </dialog>
 <div id="xsrc" class="paper" aria-hidden="true"><article class="vditor-reset"></article></div>
 <div id="sheets" class="paper" aria-hidden="true"></div>
+<div id="stale" role="status" hidden>This file changed on disk. <button>Refresh to update</button></div>
 <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
 <script>
 const $ = s => document.querySelector(s);
@@ -531,7 +534,10 @@ async function renderView(){
   document.body.classList.toggle('empty', !QL && !T().value.trim());
   applyCodeTheme();
   await themeCss();
-  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
+  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after: () => {
+    if (!QL) for (const b of $('#doc').querySelectorAll('li.vditor-task > input')) b.disabled = false; // tickable, see the change handler
+    after();
+  }}));
 }
 $('#empty').addEventListener('click', e => {
   const go = e.target.closest('[data-go]')?.dataset.go;
@@ -554,7 +560,7 @@ function createEditor(kind){
     preview: {mode: 'editor', theme: theme(), hljs: {...hlOpts(), langs: codeLangs()}, markdown: markdown(), math: {engine: 'KaTeX'}},
     hint: {emoji: {}}, // no ":" emoji picker; "/" is the Quick Insert palette below
     upload: {multiple: true, handler: saveAssets},
-    input: v => changed(v, tab),
+    input: v => changed(tidyTasks(v), tab),
     after: () => { ready = true; editor.focus(); restoreScroll(); },
   });
 }
@@ -621,9 +627,29 @@ function writingTool(){
     showMenu(r.left, r.bottom + 4, WRITING.map(([k, name, ic, key]) => [name, () => setWriting(k), {icon: ic, key, check: k === writing()}]));
   }};
 }
+// ---- task lists: `- [ ] item` lines, outside fenced code (the same ones the renderer turns into checkboxes) ----
+const TASK = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])\]( +)/;
+function eachTask(md, fn){ // fn(line, n) -> new line; n counts task lines in document order
+  let fence = '', n = 0;
+  return md.split('\n').map(l => {
+    const f = l.match(/^\s*(`{3,}|~{3,})/);
+    if (f && (!fence || f[1][0] === fence[0] && f[1].length >= fence.length)) { fence = fence ? '' : f[1]; return l; }
+    return !fence && TASK.test(l) ? fn(l, n++) : l;
+  }).join('\n');
+}
+// Vditor writes a ticked box as `[X]` followed by two spaces; keep the file's `[x] ` like GFM and MarkText do
+const tidyTasks = md => eachTask(md, l => l.replace(TASK, (_, a, x) => `${a}${x.toLowerCase()}] `));
+const editorMd = () => tidyTasks(editor.getValue());
+// View mode: ticking a box writes it back to the file (MarkText behaviour)
+$('#doc').addEventListener('change', e => {
+  const boxes = [...$('#doc').querySelectorAll('li.vditor-task > input[type=checkbox]')], i = boxes.indexOf(e.target);
+  if (i < 0) return;
+  e.target.closest('li').classList.toggle('vditor-task--done', e.target.checked);
+  changed(eachTask(T().value, (l, n) => n === i ? l.replace(TASK, (_, a, x, s) => `${a}${e.target.checked ? 'x' : ' '}]${s}`) : l));
+});
 // the editor's text back into its tab (the editor only holds the live copy)
-function commit(){ if (editorTab && ready) editorTab.value = editor.getValue(); }
-const current = () => editorTab === T() && ready ? editor.getValue() : T().value;
+function commit(){ if (editorTab && ready) editorTab.value = editorMd(); }
+const current = () => editorTab === T() && ready ? editorMd() : T().value;
 function changed(v, t = T()){
   t.value = v;
   if (!t.dirty) { t.dirty = true; syncChrome(); } else if (t === T()) stats();
@@ -698,7 +724,7 @@ function rewriteBlock(el, fn, focus){
   const md = fn(lute.VditorIRDOM2Md(el.outerHTML).trim());
   const p = document.createElement('p'); p.dataset.block = '0'; p.textContent = TOKEN;
   el.replaceWith(p);
-  const v = editor.getValue();
+  const v = editorMd();
   rerender(md ? v.replace(TOKEN, () => md) : v.replace(/\n*MARKQUILLBLOCKTOKEN\n*/, '\n\n').replace(/^\n+/, ''), i + focus);
 }
 const TURN = [['Paragraph', '', ICON.para, '⌥⌘0'], ...[1, 2, 3, 4, 5, 6].map(n => ['Heading ' + n, '#'.repeat(n) + ' ', 'H' + n, '⌥⌘' + n]),
@@ -756,7 +782,7 @@ addEventListener('drop', e => {
   if (dropBefore !== el && dropBefore !== el.nextElementSibling) {
     root.insertBefore(el, dropBefore);
     el.classList.remove('dragging');
-    rerender(editor.getValue(), [...root.children].indexOf(el));
+    rerender(editorMd(), [...root.children].indexOf(el));
   }
 }, true);
 $('#blockBtn').addEventListener('dragend', () => {
@@ -1004,7 +1030,7 @@ function renderTabs(){
 }
 // title bar, dirty dot, session restore: the host keeps what it needs from this one message
 function syncChrome(){
-  renderTabs(); renderSide(); stats(); saveState();
+  renderTabs(); renderSide(); stats(); saveState(); syncStale();
   if (native && !QL) native.postMessage({cmd: 'state', title: T().name, path: T().path, dirty: tabs.some(t => t.dirty), paths: tabs.map(t => t.path).filter(Boolean)});
 }
 const tabsEl = $('#tabs');
@@ -1186,10 +1212,29 @@ async function saveTab(t = T()){
     if (r.path) { Object.assign(t, r); if (t === T()) setMode(mode); } // Save As: new path, re-resolve images
   } else if (t.handle?.createWritable) { const w = await t.handle.createWritable(); await w.write(t.value); await w.close(); }
   else download(t.name, t.value, 'text/markdown');
-  t.dirty = false; syncChrome();
+  t.dirty = false; t.mtime = undefined; syncChrome(); // our own write: re-read the file's time instead of calling it a change
   return true;
 }
 const save = () => saveTab();
+
+// ---- live reload: a saved file changed on disk (another editor, git) -> "Refresh to update" ----
+// ponytail: polls every 2s while the window is visible; a native file watcher if that ever shows up in battery use
+setInterval(async () => {
+  const t = T();
+  if (!native || !t.path || document.hidden || t.stale) return;
+  const m = await native.postMessage({cmd: 'mtime', path: t.path});
+  if (m == null) return; // missing file, or a host without the command
+  if (t.mtime === undefined) t.mtime = m; else if (m !== t.mtime) { t.stale = m; if (t === T()) syncStale(); }
+}, 2000);
+function syncStale(){ $("#stale").hidden = !T().stale; }
+$('#stale button').onclick = async () => {
+  const t = T();
+  if (t.dirty && (await ask(`Discard your changes to ${t.name}?`, 'The file changed on disk. Refreshing loads that version.', ['Refresh', 'Cancel'])) !== 0) return;
+  const text = await native.postMessage({cmd: 'reload', path: t.path});
+  if (text == null) return;
+  Object.assign(t, {value: text, dirty: false, mtime: t.stale, stale: 0});
+  editorTab = null; switchTo(active);
+};
 // used by the host before closing a window / quitting
 async function saveAll(){ for (const t of tabs.filter(t => t.dirty)) if (!(await saveTab(t))) return false; return true; }
 // Tauri asks here before closing a window with unsaved tabs (the macOS app uses a native alert)
@@ -1497,6 +1542,9 @@ addEventListener('keydown', e => {
   }
   if (!mod || e.altKey) return;
   if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
+  if (e.key === 'a' && mode === 'read' && !e.target.closest?.('input,textarea,[contenteditable]')) { // select the document, not the app around it
+    e.preventDefault(); return getSelection().selectAllChildren($('#doc'));
+  }
   const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active), n: () => native?.postMessage({cmd: 'newWindow'}),
     ',': () => panel('#settings'), 1: () => setMode('read'), 2: () => setMode('edit'), 3: toggleSource}[e.key];
   if (k) { e.preventDefault(); k(); }
