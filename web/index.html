@@ -395,6 +395,7 @@ body>#sheets{display:none}
       <h3>Editor</h3>
       <label class="toggle"><span>Outline<small>Table of contents beside the editor</small></span><input type="checkbox" class="switch" data-k="outline"></label>
       <label class="field"><span class="fl">Auto-save</span><select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
+      <label class="field"><span class="fl">Date format</span><select data-k="date-format"><option value="YYYY-MM-DD">2026-09-30</option><option value="DD/MM/YYYY">30/09/2026</option><option value="MM/DD/YYYY">09/30/2026</option><option value="DD.MM.YYYY">30.09.2026</option><option value="D MMM YYYY">30 Sep 2026</option><option value="MMM D, YYYY">Sep 30, 2026</option><option value="MMMM D, YYYY">September 30, 2026</option><option value="dddd, MMMM D, YYYY">Wednesday, September 30, 2026</option></select></label>
       <label class="field"><span class="fl">Save pasted images to</span><select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
 
       <h3>Custom CSS</h3>
@@ -459,7 +460,7 @@ const QL = window.QL_MODE === true;  // set by the Quick Look extension
 const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
 const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
 const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
-const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', align: 'center', 'code-colors': 'github', font: '-apple-system,system-ui,sans-serif',
+const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', 'date-format': 'YYYY-MM-DD', align: 'center', 'code-colors': 'github', font: '-apple-system,system-ui,sans-serif',
   paper: 'a4', orient: 'portrait', xsize: 11, xlh: 1.5, numbers: 'none'}; // the last row: PDF export
 const opt = k => store.get('set-' + k) ?? String(DEFAULTS[k] ?? '');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -467,7 +468,7 @@ if (!['', 'light', 'dark'].includes(opt('theme'))) store.set('set-theme', ''); /
 const themeName = () => opt('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 const dark = () => themeName() !== 'light';
 const icon = d => `<svg class="i" viewBox="0 0 24 24">${d}</svg>`;
-const ICON = {x: '<path d="M18 6 6 18M6 6l12 12"/>', plus: '<path d="M12 5v14M5 12h14"/>', chev: '<path d="m9 18 6-6-6-6"/>',
+const ICON = {x: '<path d="M18 6 6 18M6 6l12 12"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', plus: '<path d="M12 5v14M5 12h14"/>', chev: '<path d="m9 18 6-6-6-6"/>',
   file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   turn: '<path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M8 16H3v5"/>',
@@ -591,7 +592,7 @@ function insertTool(){
   return {name: 'insert', tip: 'Insert', icon: `${icon(ICON.plus)}${icon(ICON.down)}`, click(){
     const r = document.querySelector('.vditor-toolbar [data-type=insert]').getBoundingClientRect();
     showMenu(r.left, r.bottom + 4, ['Inline', wrap('Superscript', ICON.sup, '^', '^', '2'), wrap('Subscript', ICON.sub, '~', '~', '2'),
-      wrap('Inline math', ICON.sigma, '$', '$', 'x^2'), '-', 'Blocks', put('Callout', ICON.info), put('Math block', ICON.mathbox),
+      wrap('Inline math', ICON.sigma, '$', '$', 'x^2'), ["Today's date", () => editor.insertValue(today()), {icon: ICON.calendar}], '-', 'Blocks', put('Callout', ICON.info), put('Math block', ICON.mathbox),
       put('Diagram', ICON.diagram, 'Flowchart'), put('Divider', ICON.divider), put('Footnote', ICON.asterisk), put('Table of contents', ICON.toc)]);
   }};
 }
@@ -789,7 +790,14 @@ $('#blockBtn').addEventListener('dragend', () => {
   dragBlock?.classList.remove('dragging'); dragBlock = dropBefore = null; $('#dropLine').hidden = true;
 });
 
-// ---- Quick Insert: "/" on an empty line opens a palette of blocks in six groups; type to filter ----
+// ---- Quick Insert: "/" on an empty line (or after a space mid-line, inline items only) opens a palette of blocks in six groups; type to filter ----
+// today in the Settings date format (local time); longest tokens first so MMMM isn't eaten as MM+MM
+function today(){
+  const d = new Date(), p = n => String(n).padStart(2, '0'), name = o => d.toLocaleDateString('en-US', o);
+  const T = {YYYY: d.getFullYear(), MMMM: name({month: 'long'}), MMM: name({month: 'short'}), MM: p(d.getMonth() + 1),
+    DD: p(d.getDate()), D: d.getDate(), dddd: name({weekday: 'long'})};
+  return opt('date-format').replace(/YYYY|MMMM|MMM|MM|DD|dddd|D/g, t => T[t]);
+}
 const INSERT = [
   ['Basic blocks', [['Text', 'Plain paragraph', ICON.para, ''], ['Heading 1', 'Big section heading', 'H1', '# '],
     ['Heading 2', 'Medium section heading', 'H2', '## '], ['Heading 3', 'Small section heading', 'H3', '### '],
@@ -808,18 +816,25 @@ const INSERT = [
     ['Flowchart.js', 'Classic flowchart', ICON.diagram, '```flowchart\nst=>start: Start\ne=>end: End\nst->e\n```']]],
   ['Advanced', [['Table of contents', 'Headings of this page', ICON.toc, '[toc]'], ['Footnote', 'Reference at the bottom', '¹', 'Text[^1]\n\n[^1]: The footnote.'],
     ['Front matter', 'YAML metadata', '---', '---\ntitle: \ntags: []\n---\n'], ['Highlight', 'Marked text', 'H', '==highlighted=='],
-    ['Superscript', 'Raised text', 'x²', 'x^2^'], ['Subscript', 'Lowered text', 'x₂', 'H~2~O']]],
+    ['Superscript', 'Raised text', 'x²', 'x^2^'], ['Subscript', 'Lowered text', 'x₂', 'H~2~O'], ['Date', "Today's date", ICON.calendar, today]]],
 ];
-let slash = null; // open palette: {el, q, list, i}
+// these go in at the caret, so they're offered mid-line too; everything else is a whole block
+const INLINE = new Set(['Image', 'Link', 'Inline math', 'Highlight', 'Superscript', 'Subscript', 'Date']);
+let slash = null; // open palette: {el, q, list, i, at}
 document.addEventListener('input', () => {
   if (mode !== 'edit' || !ready) return;
   const el = activeBlock(), m = el?.tagName === 'P' && el.textContent.match(/^\/(?!\s)([^\/\n]{0,30})$/);
-  m ? openSlash(el, m[1]) : closeSlash();
+  if (m) return openSlash(el, m[1]);
+  // mid-line: "/" after a space (or at the start of a text run), inline items only
+  const s = getSelection(), n = s.anchorNode, o = s.anchorOffset;
+  const mm = el && s.isCollapsed && n?.nodeType === 3 && !n.parentElement.closest('pre, code, .vditor-ir__marker') && n.data.slice(0, o).match(/(?:^|\s)\/([^\/\s]{0,30})$/);
+  mm ? openSlash(el, mm[1], {n, start: o - mm[1].length - 1, end: o}) : closeSlash();
 });
-function openSlash(el, q){
+function openSlash(el, q, at){
   const box = $('#slash'), words = q.toLowerCase();
-  const groups = INSERT.map(([g, items]) => [g, items.filter(([l, d]) => `${l} ${d} ${g}`.toLowerCase().includes(words))]).filter(([, it]) => it.length);
-  slash = {el, q, list: groups.flatMap(([, it]) => it), i: 0};
+  const groups = INSERT.map(([g, items]) => [g, items.filter(([l, d]) => (!at || INLINE.has(l)) && `${l} ${d} ${g}`.toLowerCase().includes(words))]).filter(([, it]) => it.length);
+  slash = {el, q, list: groups.flatMap(([, it]) => it), i: 0, at};
+  if (at && !slash.list.length) return closeSlash(); // "a /path" mid-line: stay quiet
   let n = 0;
   box.innerHTML = groups.map(([g, it]) => `<div class="mh">${g}</div>` + it.map(([l, d, ic]) =>
     `<button role="option" data-n="${n++}"><span class="mi">${ic.startsWith('<') ? icon(ic) : esc(ic)}</span><span class="ml">${esc(l)}<small>${esc(d)}</small></span></button>`).join('')).join('')
@@ -836,8 +851,15 @@ function markSlash(scroll = true){
 }
 function closeSlash(){ slash = null; $('#slash').style.display = 'none'; }
 function pickSlash(){
-  const it = slash?.list[slash.i], el = slash?.el; closeSlash();
+  const it = slash?.list[slash.i], el = slash?.el, at = slash?.at; closeSlash();
   if (!it || !el?.isConnected) return;
+  if (INLINE.has(it[0])) { // swap the "/query" for the text, at the caret
+    const r = document.createRange();
+    if (at?.n.isConnected) { r.setStart(at.n, at.start); r.setEnd(at.n, at.end); } else r.selectNodeContents(el);
+    r.deleteContents(); getSelection().removeAllRanges(); getSelection().addRange(r);
+    const md = typeof it[3] === 'function' ? it[3]() : it[3];
+    return editor.insertValue(esc(md));
+  }
   if (it[3]) return putBlock(el, it, true);
   el.innerHTML = '<br>'; // Text: just clear the "/query"
   const r = document.createRange(); r.setStart(el, 0);
