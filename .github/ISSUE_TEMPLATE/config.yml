@@ -1,0 +1,4 @@
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/sarat03/markquill/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
