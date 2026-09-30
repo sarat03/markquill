@@ -68,8 +68,10 @@ The builds are not code-signed yet, so the first launch shows a warning:
 
 **Read, edit or write source, one shortcut apart**
 - **View** (⌘1): read and copy; nothing can change by accident.
-- **Edit** (⌘2): inline editing like a document. Type `/` on an empty line for the Quick Insert menu (headings, lists, tables, math, diagrams…).
+- **Edit** (⌘2): inline editing like a document. Type `/` on an empty line for the Quick Insert menu (headings, lists, tables, math, diagrams…), or after a space mid-line for inline items (link, image, inline math, date…).
 - **Source** (⌘3): raw Markdown. Writing modes: Standard, Source, Typewriter (caret line stays centred) and Focus (dims everything but the current block).
+
+**Dates.** Insert today's date from the Insert menu or with `/date`. Pick the format in Settings (2026-09-30, 30/09/2026, 09/30/2026, Sep 30, 2026 and more); it's saved as plain text.
 
 **Blocks.** Click the badge in a block's margin (¶, H1…) to duplicate it, turn it into another kind or delete it. Drag the badge to move the block.
 
