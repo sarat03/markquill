@@ -1,4 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+// dev builds are named differently so they can run beside the installed app
+const APP_NAME: &str = if cfg!(debug_assertions) { "MarkQuill_dev" } else { "MarkQuill" };
 // Tauri host for Windows and Linux (also runs on macOS). Same contract as macos/App/main.swift: the app lives in
 // web/index.html and this file only answers the page's `native.postMessage({cmd, ...})`, which arrives here as
 // the single `native` command, for what a web page can't do: files, dialogs, clipboard, printing and windows.
@@ -48,7 +51,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
     match s("cmd").as_str() {
         "state" => {
             let dirty = msg["dirty"].as_bool().unwrap_or(false);
-            let title = if s("title").is_empty() { "MarkQuill".into() } else { s("title") };
+            let title = if s("title").is_empty() { APP_NAME.into() } else { s("title") };
             let _ = w.set_title(&format!("{title}{}", if dirty { " •" } else { "" }));
             if let Some(win) = st(app).wins.get_mut(w.label()) {
                 win.dirty = dirty;
@@ -68,6 +71,10 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
             }
             return match save_panel(&w, &s("name")) { Some(p) if write(&w, &s("data"), &p) => { allow(app, &p); info(&p) } _ => json!(false) };
         }
+        // live reload: the page polls the file's modified time and, on "Refresh", reads it again
+        "mtime" if known(app, &s("path")) => return json!(fs::metadata(s("path")).and_then(|m| m.modified()).ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_millis() as u64)),
+        "reload" if known(app, &s("path")) => return json!(read_md(app, Path::new(&s("path")))),
         "rename" if known(app, &s("path")) => return rename(app, &s("path"), &s("name")),
         "rename" => return err("MarkQuill only renames files you opened or chose."),
         "asset" if !s("doc").is_empty() && !known(app, &s("doc")) => return err("MarkQuill only adds attachments next to files you opened or chose."),
@@ -76,14 +83,29 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
         "copy" => {
             let _ = if s("html").is_empty() { app.clipboard().write_text(s("text")) } else { app.clipboard().write_html(s("html"), Some(s("text"))) };
         }
-        "print" => {
-            // paper, margins and page numbers go through CSS here; the webview's print dialog does the rest
-            let size = if s("paper") == "letter" { "letter" } else { "A4" };
-            let margin = s("margin").parse::<f64>().unwrap_or(18.0);
-            let nums = if s("numbers") == "true" { "@bottom-center{content:counter(page)}" } else { "" };
-            let css = json!(format!("@page{{size:{size};margin:{margin}mm;{nums}}}"));
-            let _ = w.eval(&format!("(document.getElementById('pageCss') || document.head.appendChild(Object.assign(document.createElement('style'), {{id: 'pageCss'}}))).textContent = {css}"));
+        // The page lays out its own pages (size, margins, header, footer); these only put them on paper.
+        "pdf" => { // straight to a file, no print dialog
+            let size = (msg["w"].as_f64().unwrap_or(210.0), msg["h"].as_f64().unwrap_or(297.0)); // mm
+            let picked = w.dialog().file().set_parent(&w).set_file_name(s("name")).add_filter("PDF", &["pdf"]).blocking_save_file();
+            let Some(mut p) = picked.and_then(|f| f.into_path().ok()) else { return json!(false) };
+            if !p.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf")) { p.as_mut_os_string().push(".pdf") }
+            return match pdf::write(&w, &p, size) { Ok(()) => json!(true), Err(e) => err(e) };
+        }
+        "print" => { // fallback: the webview's print dialog, which names the PDF after the window title
+            #[cfg(target_os = "macos")]
+            { // WebKit ignores `@page size`: the paper goes on the print info the dialog opens with
+                let pt = |k: &str| msg[k].as_f64().unwrap_or(0.0) * 72.0 / 25.4;
+                let size = objc2_foundation::NSSize::new(pt("w"), pt("h"));
+                let _ = w.run_on_main_thread(move || {
+                    let info = objc2_app_kit::NSPrintInfo::sharedPrintInfo();
+                    info.setPaperSize(size);
+                    (info.setTopMargin(0.0), info.setBottomMargin(0.0), info.setLeftMargin(0.0), info.setRightMargin(0.0));
+                });
+            }
+            let title = w.title().unwrap_or_default();
+            if !s("name").is_empty() { let _ = w.set_title(&s("name")); }
             let _ = w.print();
+            let _ = w.set_title(&title);
         }
         "newWindow" => { // optionally carrying a tab moved out of this window
             let d = new_window(app, true);
@@ -132,6 +154,92 @@ async fn install_update(app: &AppHandle) -> Result<(), String> {
     app.restart()
 }
 
+// ---- PDF: each webview's own print-to-file, with zero margins at the page's paper size (one page box = one sheet) ----
+// The command waits for the file on its own thread; the webview work runs on the main thread.
+mod pdf {
+    use std::{path::Path, sync::mpsc, time::Duration};
+    use tauri::WebviewWindow;
+    type Done = mpsc::Sender<Result<(), String>>;
+
+    pub fn write(w: &WebviewWindow, path: &Path, mm: (f64, f64)) -> Result<(), String> {
+        let (tx, rx) = mpsc::channel();
+        let path = path.to_path_buf();
+        w.with_webview(move |wv| start(wv, &path, mm, tx)).map_err(|e| e.to_string())?;
+        rx.recv_timeout(Duration::from_secs(120)).unwrap_or(Err("Writing the PDF timed out.".into()))
+    }
+
+    #[cfg(target_os = "macos")]
+    fn start(wv: tauri::webview::PlatformWebview, path: &Path, (w, h): (f64, f64), done: Done) {
+        use objc2_app_kit::{NSPrintInfo, NSPrintJobSavingURL, NSPrintSaveJob};
+        use objc2_foundation::{NSSize, NSString, NSURL};
+        let pt = |mm: f64| mm * 72.0 / 25.4;
+        unsafe {
+            let web: &objc2_web_kit::WKWebView = &*wv.inner().cast();
+            let info = NSPrintInfo::new();
+            info.setPaperSize(NSSize::new(pt(w), pt(h)));
+            (info.setTopMargin(0.0), info.setBottomMargin(0.0), info.setLeftMargin(0.0), info.setRightMargin(0.0));
+            info.setJobDisposition(NSPrintSaveJob);
+            info.dictionary().insert(NSPrintJobSavingURL, &*NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy())));
+            let op = web.printOperationWithPrintInfo(&info);
+            op.setShowsPrintPanel(false);
+            op.setShowsProgressPanel(false);
+            if let Some(v) = op.view() { v.setFrame(web.bounds()) } // without a frame WKWebView prints blank pages
+            // WKWebView only prints through the window-modal run. It writes the file after this returns; the page
+            // keeps its page boxes until the next export, so nothing changes under it meanwhile.
+            match web.window() {
+                Some(win) => { op.runOperationModalForWindow_delegate_didRunSelector_contextInfo(&win, None, None, std::ptr::null_mut()); let _ = done.send(Ok(())); }
+                None => { let _ = done.send(Err("The window isn't ready.".into())); }
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    fn start(wv: tauri::webview::PlatformWebview, path: &Path, (w, h): (f64, f64), done: Done) {
+        use webview2_com::{Microsoft::Web::WebView2::Win32::*, PrintToPdfCompletedHandler};
+        use windows_core::{Interface, HSTRING};
+        let inch = |mm: f64| mm / 25.4;
+        let run = || -> windows_core::Result<()> { unsafe {
+            let web: ICoreWebView2_7 = wv.controller().CoreWebView2()?.cast()?;
+            let s = wv.environment().cast::<ICoreWebView2Environment6>()?.CreatePrintSettings()?;
+            s.SetPageWidth(inch(w))?;
+            s.SetPageHeight(inch(h))?;
+            (s.SetMarginTop(0.0)?, s.SetMarginBottom(0.0)?, s.SetMarginLeft(0.0)?, s.SetMarginRight(0.0)?);
+            s.SetShouldPrintBackgrounds(true)?;
+            s.SetShouldPrintHeaderAndFooter(false)?;
+            let done = done.clone();
+            let handler = PrintToPdfCompletedHandler::create(Box::new(move |r, ok| {
+                let _ = done.send(if r.is_ok() && ok { Ok(()) } else { Err("The PDF couldn't be written.".into()) });
+                Ok(())
+            }));
+            web.PrintToPdf(&HSTRING::from(path.as_os_str()), &s, &handler)
+        } };
+        if let Err(e) = run() { let _ = done.send(Err(e.message())); } // an old WebView2 runtime without PrintToPdf
+    }
+
+    #[cfg(target_os = "linux")]
+    fn start(wv: tauri::webview::PlatformWebview, path: &Path, (w, h): (f64, f64), done: Done) {
+        use gtk::{PageSetup, PaperSize, PrintSettings, Unit};
+        use webkit2gtk::{PrintOperation, PrintOperationExt};
+        let uri = match gtk::glib::filename_to_uri(path, None) { Ok(u) => u, Err(e) => { let _ = done.send(Err(e.to_string())); return } };
+        let paper = PaperSize::new_custom("markquill", "MarkQuill", w, h, Unit::Mm);
+        let setup = PageSetup::new();
+        setup.set_paper_size(&paper);
+        for m in [PageSetup::set_top_margin, PageSetup::set_bottom_margin, PageSetup::set_left_margin, PageSetup::set_right_margin] { m(&setup, 0.0, Unit::Mm) }
+        let settings = PrintSettings::new();
+        settings.set_printer("Print to File"); // GTK's own PDF writer
+        settings.set_paper_size(&paper);
+        settings.set(gtk::PRINT_SETTINGS_OUTPUT_FILE_FORMAT, Some("pdf"));
+        settings.set(gtk::PRINT_SETTINGS_OUTPUT_URI, Some(&uri));
+        let op = PrintOperation::new(&wv.inner());
+        op.set_page_setup(&setup);
+        op.set_print_settings(&settings);
+        let failed = done.clone();
+        op.connect_failed(move |_, e| { let _ = failed.send(Err(e.to_string())); });
+        op.connect_finished(move |_| { let _ = done.send(Ok(())); }); // after `failed` too: the first message wins
+        op.print();
+    }
+}
+
 // ---- windows ----
 fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
     let label = {
@@ -142,7 +250,7 @@ fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
         l
     };
     WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
-        .title("MarkQuill")
+        .title(APP_NAME)
         .inner_size(1100.0, 760.0)
         // later windows start with an empty tab instead of the welcome page
         .initialization_script(if fresh { "window.FRESH = true".into() } else { format!("window.START = {:?}", std::mem::take(&mut st(app).start)) })
@@ -245,14 +353,18 @@ fn info(p: &Path) -> Value {
 fn open_file(w: &WebviewWindow, p: &Path) {
     let p = canon(p);
     let name = p.file_name().unwrap_or_default().to_string_lossy().into_owned();
-    let Some(text) = fs::read(&p).ok().and_then(|b| String::from_utf8(b).ok()) else {
+    let Some(text) = read_md(w.app_handle(), &p) else {
         return alert(w, &format!("Couldn't read {name} as UTF-8 text."));
     };
-    let (text, format) = decode(&text);
-    st(w.app_handle()).formats.insert(p.to_string_lossy().into_owned(), format);
     allow(w.app_handle(), &p);
     let i = info(&p);
     load(w, json!([i["name"], text, i["base"], i["path"], false]));
+}
+
+fn read_md(app: &AppHandle, p: &Path) -> Option<String> {
+    let (text, format) = decode(&String::from_utf8(fs::read(p).ok()?).ok()?);
+    st(app).formats.insert(p.to_string_lossy().into_owned(), format);
+    Some(text)
 }
 
 // The page works in LF without a BOM; remember what the file had so saving doesn't rewrite every line.

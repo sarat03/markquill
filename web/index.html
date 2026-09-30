@@ -106,8 +106,14 @@ body.read #editor,body.edit #out,body.source #out{display:none}
 :root[data-code=red]{--code-bg:#f7f6f3;--code-fg:#37352f;--icode-bg:#87837826;--icode-fg:#eb5757}
 :root[data-code=red][data-theme=dark]{--code-bg:#252525;--code-fg:#e6e6e6;--icode-bg:#87837826;--icode-fg:#ff7369}
 #doc pre code,.vditor-reset pre code,.vditor-sv{font-size:var(--code-size)!important}
+/* tables fit the column and wrap their cells instead of scrolling sideways, on screen and on paper (!important: Vditor's theme loads later).
+   break-word, not anywhere: anywhere lets a narrow column shrink to one letter per line */
+.vditor-reset table{display:table!important;overflow:visible!important;width:auto!important;max-width:100%}
+.vditor-reset td,.vditor-reset th,.vditor-reset td code,.vditor-reset th code{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important}
 #doc{max-width:var(--width);margin:0 auto;padding:0}
 /* empty document */
+#stale{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:9px;background:var(--raised);color:var(--fg);box-shadow:var(--shadow);font-size:13px}
+#stale[hidden]{display:none}#stale button{border:0;border-radius:6px;padding:5px 10px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
 #empty{display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:60%;text-align:center;color:var(--mute);font-size:14px}
 #empty>svg{width:44px;height:44px;stroke-width:1.2;margin-bottom:8px;opacity:.7}
 #empty h2{margin:0;font-size:18px;font-weight:600;color:var(--fg)}#empty p{margin:0 0 14px}
@@ -137,9 +143,9 @@ body.empty #empty{display:flex}body.empty #doc{display:none}
 /* the scroller spans the full width (scrollbar at the window edge); padding centres the text column */
 .vditor-ir .vditor-reset,.vditor-wysiwyg .vditor-reset{max-width:none;margin:0!important;padding:40px max(var(--gutter), calc((100% - var(--width)) / 2)) 30vh!important}
 .vditor-sv{max-width:none;margin:0!important;padding:48px max(var(--gutter), calc((100% - var(--width)) / 2)) 30vh!important;color:var(--fg)!important;background:var(--bg)!important}
-/* Settings › Alignment: Left pins the text column to the left edge instead of centring it */
-body.left #doc{margin:0}
-body.left .vditor-ir .vditor-reset,body.left .vditor-wysiwyg .vditor-reset,body.left .vditor-sv{padding-left:var(--gutter)!important;padding-right:max(var(--gutter), calc(100% - var(--width) - var(--gutter)))!important}
+/* Settings › Alignment: Left fills the whole window (Page width only applies when centred) */
+body.left #doc{margin:0;max-width:none}
+body.left .vditor-ir .vditor-reset,body.left .vditor-wysiwyg .vditor-reset,body.left .vditor-sv{padding-left:var(--gutter)!important;padding-right:var(--gutter)!important}
 .vditor-outline{background:var(--panel)!important}
 /* focus mode: dim every block except the one holding the caret */
 body.focus .vditor-reset>*{opacity:.25;transition:opacity .15s}
@@ -181,7 +187,7 @@ body:not(.read) #find{top:52px} /* below the formatting toolbar */
 /* settings panel */
 #settings .scroll{flex:1;overflow:auto;padding:4px 16px 24px}
 #gear{position:relative}#gear.dot::after{content:'';position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
-#settings h3{margin:20px 0 10px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
+#settings h3,#xp h4{margin:20px 0 10px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
 .field{display:block;margin-bottom:14px}
 .fl{display:flex;justify-content:space-between;margin-bottom:6px}
 .fl output{color:var(--mute);font-variant-numeric:tabular-nums}
@@ -227,7 +233,7 @@ body:not(.read) #find{top:52px} /* below the formatting toolbar */
 .menu .mh{padding:4px 10px 2px;font-size:11px;font-weight:600;color:var(--mute)}
 dialog{width:min(360px,calc(100vw - 32px));padding:20px;border:0;border-radius:12px;background:var(--raised);color:var(--fg);box-shadow:var(--shadow)}
 dialog::backdrop{background:#0000004d}
-dialog h3{margin:0 0 6px;font-size:14px;font-weight:600}dialog p{margin:0 0 18px;color:var(--mute);line-height:1.5}
+#ask h3{margin:0 0 6px;font-size:14px;font-weight:600}#ask p{margin:0 0 18px;color:var(--mute);line-height:1.5}
 dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min-width:84px}
 #drop{display:none;position:fixed;inset:8px;border:2px dashed var(--accent);border-radius:12px;background:var(--accent-soft);z-index:200;pointer-events:none}
 #drop::after{content:"Drop Markdown files to open them";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 18px;border-radius:8px;background:var(--raised);box-shadow:var(--shadow);font-size:14px}
@@ -246,9 +252,43 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min
   .actions .sep{margin:0 2px}
 }
 body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{display:none!important}
-@media print{#side,#bar,#status,#settings,#find,#editor,#empty,.menu{display:none!important}body,.app{height:auto;overflow:visible;display:block}#out{position:static;overflow:visible;display:block!important;padding:0}}
+/* ---- PDF export: the document is split into page boxes right here (see layoutPages), always light ---- */
+#xp{width:min(1040px,calc(100vw - 32px));height:min(740px,calc(100vh - 32px));max-width:none;max-height:none;padding:0;overflow:hidden}
+#xp[open]{display:flex}
+#xp .xs{flex:none;width:272px;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+#xp .xs>.scroll{flex:1;overflow:auto;padding:18px 18px 6px}
+#xp .xs h3{margin:0 0 16px;font-size:14px;font-weight:600}
+#xp .row{align-items:center;padding:12px 18px;border-top:1px solid var(--line)}#xp .row button{min-width:0}
+#xpInfo{flex:1;color:var(--mute);font-size:12px}
+#xpv{flex:1;min-width:0;overflow:auto;padding:24px;background:var(--panel)}
+#xpz{margin:0 auto;overflow:hidden}
+#xpz>#sheets{width:max-content;transform:scale(var(--k,1));transform-origin:0 0}
+#xpz .sheet{box-shadow:0 1px 3px #0000002e,0 0 0 1px #0000000f}#xpz .sheet+.sheet{margin-top:calc(16px / var(--k,1))}
+/* the pages keep the reader's font and code style, in the light colors: the dark theme never reaches paper */
+.paper{--bg:#fff;--fg:#1f2328;--mute:#6b7079;--line:#e3e4e8;--code-bg:#f6f8fa;--code-fg:#1f2328;--icode-bg:#818b981f;--icode-fg:#1f2328;
+  color-scheme:light;color:var(--fg);-webkit-print-color-adjust:exact;print-color-adjust:exact;pointer-events:none;user-select:none;-webkit-user-select:none}
+[data-code=vscode] .paper{--code-bg:#1e1e1e;--code-fg:#d4d4d4;--icode-bg:#1e1e1e;--icode-fg:#d4d4d4}
+[data-code=red] .paper{--code-bg:#f7f6f3;--code-fg:#37352f;--icode-bg:#87837826;--icode-fg:#eb5757}
+.paper .vditor-reset{color:var(--fg)}
+.paper .vditor-copy{display:none}
+/* paper can't scroll: code wraps; tall images shrink to fit a page */
+.paper pre>code{white-space:pre-wrap!important;overflow-wrap:anywhere!important;overflow:visible!important;max-height:none!important}
+.paper img{max-height:calc(var(--ph) - 2 * var(--m) - 2em)}
+#xsrc{position:fixed;left:-10000px;top:0;width:calc(var(--pw) - 2 * var(--m));visibility:hidden} /* the document, rendered once per export and cloned into pages */
+.sheet{position:relative;width:var(--pw);height:var(--ph);background:#fff;overflow:hidden}
+.sheet>.pc{position:absolute;inset:var(--m);padding:0 1px;overflow:hidden} /* 1px: a full-width table's outer border sits half outside */
+.sheet>.pc>:first-child{margin-top:0!important}
+.sheet>.hd,.sheet>.ft{position:absolute;left:var(--m);right:var(--m);height:var(--m);display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;font:9pt var(--font);color:#6b7079}
+.sheet>.hd{top:0}.sheet>.ft{bottom:0}
+body>#sheets{display:none}
+/* one page box = one sheet: a little under the paper, as WebKitGTK's page came out ~.5mm shorter and spilled every box onto a blank sheet */
+@media print{html,body{height:auto!important;overflow:visible!important;background:#fff!important}
+  body>:not(#sheets){display:none!important}body>#sheets{display:block}
+  .sheet{width:calc(var(--pw) - .3mm);height:calc(var(--ph) - 1mm);break-after:page}.sheet:last-child{break-after:auto}}
 </style>
 <style id="userCss"></style>
+<style id="pageCss"></style>
+<style id="paperCss"></style>
 </head>
 <body class="read">
 <div class="app">
@@ -357,15 +397,6 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
       <label class="field"><span class="fl">Auto-save</span><select data-k="autosave"><option value="0">Off</option><option value="2">2 s after typing</option><option value="10">10 s after typing</option><option value="30">30 s after typing</option></select></label>
       <label class="field"><span class="fl">Save pasted images to</span><select data-k="assets"><option value="assets">./assets folder</option><option value="images">./images folder</option></select></label>
 
-      <h3>PDF export</h3>
-      <div class="field"><div class="fl">Page size</div>
-        <div class="seg full" role="radiogroup" aria-label="Page size">
-          <label><input class="vh" type="radio" name="paper" data-k="paper" value="a4"><span>A4</span></label>
-          <label><input class="vh" type="radio" name="paper" data-k="paper" value="letter"><span>Letter</span></label>
-        </div></div>
-      <label class="field"><span class="fl">Margins <output></output></span><input type="range" min="5" max="40" data-k="margin" data-u="mm"></label>
-      <label class="toggle"><span>Page numbers<small>Title and page number in the header &amp; footer</small></span><input type="checkbox" class="switch" data-k="pagenums"></label>
-
       <h3>Custom CSS</h3>
       <textarea data-k="css" rows="5" placeholder="#doc h1 { color: tomato }" aria-label="Custom CSS"></textarea>
 
@@ -383,6 +414,33 @@ body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{displ
 <div class="menu" id="slash" role="listbox" aria-label="Insert block"></div>
 <dialog id="ask"><form method="dialog"><h3></h3><p></p><div class="row"></div></form></dialog>
 <div id="drop"></div>
+<dialog id="xp" aria-labelledby="xpTitle">
+  <div class="xs">
+    <div class="scroll">
+      <h3 id="xpTitle">Export PDF</h3>
+      <label class="field"><span class="fl">File name</span><input type="text" id="xpName" spellcheck="false" aria-label="File name" autofocus></label>
+      <h4>Page</h4>
+      <label class="field"><span class="fl">Size</span><select data-x="paper"><option value="a4">A4</option><option value="letter">Letter</option><option value="legal">Legal</option><option value="a3">A3</option><option value="a5">A5</option></select></label>
+      <div class="field"><div class="fl">Orientation</div>
+        <div class="seg full" role="radiogroup" aria-label="Orientation">
+          <label><input class="vh" type="radio" name="orient" data-x="orient" value="portrait"><span>Portrait</span></label>
+          <label><input class="vh" type="radio" name="orient" data-x="orient" value="landscape"><span>Landscape</span></label>
+        </div></div>
+      <label class="field"><span class="fl">Margins <output></output></span><input type="range" min="5" max="40" data-x="margin" data-u=" mm"></label>
+      <h4>Style</h4>
+      <label class="field"><span class="fl">Font size <output></output></span><input type="range" min="8" max="16" step="0.5" data-x="xsize" data-u=" pt"></label>
+      <label class="field"><span class="fl">Line height <output></output></span><input type="range" min="1.2" max="2.2" step="0.1" data-x="xlh"></label>
+      <h4>Header &amp; footer</h4>
+      <label class="field"><span class="fl">Header</span><input type="text" data-x="header" placeholder="None"></label>
+      <label class="field"><span class="fl">Page numbers</span><select data-x="numbers"><option value="none">None</option><option value="n">1</option><option value="of">Page 1 of N</option></select></label>
+    </div>
+    <div class="row"><span id="xpInfo" aria-live="polite"></span><button id="xpCancel">Cancel</button><button id="xpGo" class="on">Export</button></div>
+  </div>
+  <div id="xpv" aria-label="Preview"><div id="xpz"></div></div>
+</dialog>
+<div id="xsrc" class="paper" aria-hidden="true"><article class="vditor-reset"></article></div>
+<div id="sheets" class="paper" aria-hidden="true"></div>
+<div id="stale" role="status" hidden>This file changed on disk. <button>Refresh to update</button></div>
 <input type="file" id="file" accept=".md,.markdown,.txt" hidden>
 <script>
 const $ = s => document.querySelector(s);
@@ -401,7 +459,8 @@ const QL = window.QL_MODE === true;  // set by the Quick Look extension
 const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
 const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
 const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
-const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', align: 'center', 'code-colors': 'github', font: '-apple-system,system-ui,sans-serif', paper: 'a4'};
+const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', align: 'center', 'code-colors': 'github', font: '-apple-system,system-ui,sans-serif',
+  paper: 'a4', orient: 'portrait', xsize: 11, xlh: 1.5, numbers: 'none'}; // the last row: PDF export
 const opt = k => store.get('set-' + k) ?? String(DEFAULTS[k] ?? '');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 if (!['', 'light', 'dark'].includes(opt('theme'))) store.set('set-theme', ''); // Material / One Dark were removed: back to Auto
@@ -475,7 +534,10 @@ async function renderView(){
   document.body.classList.toggle('empty', !QL && !T().value.trim());
   applyCodeTheme();
   await themeCss();
-  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
+  return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after: () => {
+    if (!QL) for (const b of $('#doc').querySelectorAll('li.vditor-task > input')) b.disabled = false; // tickable, see the change handler
+    after();
+  }}));
 }
 $('#empty').addEventListener('click', e => {
   const go = e.target.closest('[data-go]')?.dataset.go;
@@ -498,7 +560,7 @@ function createEditor(kind){
     preview: {mode: 'editor', theme: theme(), hljs: {...hlOpts(), langs: codeLangs()}, markdown: markdown(), math: {engine: 'KaTeX'}},
     hint: {emoji: {}}, // no ":" emoji picker; "/" is the Quick Insert palette below
     upload: {multiple: true, handler: saveAssets},
-    input: v => changed(v, tab),
+    input: v => changed(tidyTasks(v), tab),
     after: () => { ready = true; editor.focus(); restoreScroll(); },
   });
 }
@@ -565,9 +627,29 @@ function writingTool(){
     showMenu(r.left, r.bottom + 4, WRITING.map(([k, name, ic, key]) => [name, () => setWriting(k), {icon: ic, key, check: k === writing()}]));
   }};
 }
+// ---- task lists: `- [ ] item` lines, outside fenced code (the same ones the renderer turns into checkboxes) ----
+const TASK = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])\]( +)/;
+function eachTask(md, fn){ // fn(line, n) -> new line; n counts task lines in document order
+  let fence = '', n = 0;
+  return md.split('\n').map(l => {
+    const f = l.match(/^\s*(`{3,}|~{3,})/);
+    if (f && (!fence || f[1][0] === fence[0] && f[1].length >= fence.length)) { fence = fence ? '' : f[1]; return l; }
+    return !fence && TASK.test(l) ? fn(l, n++) : l;
+  }).join('\n');
+}
+// Vditor writes a ticked box as `[X]` followed by two spaces; keep the file's `[x] ` like GFM and MarkText do
+const tidyTasks = md => eachTask(md, l => l.replace(TASK, (_, a, x) => `${a}${x.toLowerCase()}] `));
+const editorMd = () => tidyTasks(editor.getValue());
+// View mode: ticking a box writes it back to the file (MarkText behaviour)
+$('#doc').addEventListener('change', e => {
+  const boxes = [...$('#doc').querySelectorAll('li.vditor-task > input[type=checkbox]')], i = boxes.indexOf(e.target);
+  if (i < 0) return;
+  e.target.closest('li').classList.toggle('vditor-task--done', e.target.checked);
+  changed(eachTask(T().value, (l, n) => n === i ? l.replace(TASK, (_, a, x, s) => `${a}${e.target.checked ? 'x' : ' '}]${s}`) : l));
+});
 // the editor's text back into its tab (the editor only holds the live copy)
-function commit(){ if (editorTab && ready) editorTab.value = editor.getValue(); }
-const current = () => editorTab === T() && ready ? editor.getValue() : T().value;
+function commit(){ if (editorTab && ready) editorTab.value = editorMd(); }
+const current = () => editorTab === T() && ready ? editorMd() : T().value;
 function changed(v, t = T()){
   t.value = v;
   if (!t.dirty) { t.dirty = true; syncChrome(); } else if (t === T()) stats();
@@ -642,7 +724,7 @@ function rewriteBlock(el, fn, focus){
   const md = fn(lute.VditorIRDOM2Md(el.outerHTML).trim());
   const p = document.createElement('p'); p.dataset.block = '0'; p.textContent = TOKEN;
   el.replaceWith(p);
-  const v = editor.getValue();
+  const v = editorMd();
   rerender(md ? v.replace(TOKEN, () => md) : v.replace(/\n*MARKQUILLBLOCKTOKEN\n*/, '\n\n').replace(/^\n+/, ''), i + focus);
 }
 const TURN = [['Paragraph', '', ICON.para, '⌥⌘0'], ...[1, 2, 3, 4, 5, 6].map(n => ['Heading ' + n, '#'.repeat(n) + ' ', 'H' + n, '⌥⌘' + n]),
@@ -700,7 +782,7 @@ addEventListener('drop', e => {
   if (dropBefore !== el && dropBefore !== el.nextElementSibling) {
     root.insertBefore(el, dropBefore);
     el.classList.remove('dragging');
-    rerender(editor.getValue(), [...root.children].indexOf(el));
+    rerender(editorMd(), [...root.children].indexOf(el));
   }
 }, true);
 $('#blockBtn').addEventListener('dragend', () => {
@@ -948,7 +1030,7 @@ function renderTabs(){
 }
 // title bar, dirty dot, session restore: the host keeps what it needs from this one message
 function syncChrome(){
-  renderTabs(); renderSide(); stats(); saveState();
+  renderTabs(); renderSide(); stats(); saveState(); syncStale();
   if (native && !QL) native.postMessage({cmd: 'state', title: T().name, path: T().path, dirty: tabs.some(t => t.dirty), paths: tabs.map(t => t.path).filter(Boolean)});
 }
 const tabsEl = $('#tabs');
@@ -1121,7 +1203,7 @@ const defangObserver = new MutationObserver(ms => { for (const m of ms) {
   if (m.type === 'attributes') { if (m.target.isConnected) defang(m.target); continue; }
   for (const n of m.addedNodes) if (n.nodeType === 1) { n.querySelectorAll('*').forEach(defang); defang(n); }
 }});
-for (const id of ['#doc', '#editor']) defangObserver.observe($(id), {subtree: true, childList: true, attributes: true});
+for (const id of ['#doc', '#editor', '#xsrc']) defangObserver.observe($(id), {subtree: true, childList: true, attributes: true});
 async function saveTab(t = T()){
   if (t === editorTab) commit();
   if (native) {
@@ -1130,10 +1212,29 @@ async function saveTab(t = T()){
     if (r.path) { Object.assign(t, r); if (t === T()) setMode(mode); } // Save As: new path, re-resolve images
   } else if (t.handle?.createWritable) { const w = await t.handle.createWritable(); await w.write(t.value); await w.close(); }
   else download(t.name, t.value, 'text/markdown');
-  t.dirty = false; syncChrome();
+  t.dirty = false; t.mtime = undefined; syncChrome(); // our own write: re-read the file's time instead of calling it a change
   return true;
 }
 const save = () => saveTab();
+
+// ---- live reload: a saved file changed on disk (another editor, git) -> "Refresh to update" ----
+// ponytail: polls every 2s while the window is visible; a native file watcher if that ever shows up in battery use
+setInterval(async () => {
+  const t = T();
+  if (!native || !t.path || document.hidden || t.stale) return;
+  const m = await native.postMessage({cmd: 'mtime', path: t.path});
+  if (m == null) return; // missing file, or a host without the command
+  if (t.mtime === undefined) t.mtime = m; else if (m !== t.mtime) { t.stale = m; if (t === T()) syncStale(); }
+}, 2000);
+function syncStale(){ $("#stale").hidden = !T().stale; }
+$('#stale button').onclick = async () => {
+  const t = T();
+  if (t.dirty && (await ask(`Discard your changes to ${t.name}?`, 'The file changed on disk. Refreshing loads that version.', ['Refresh', 'Cancel'])) !== 0) return;
+  const text = await native.postMessage({cmd: 'reload', path: t.path});
+  if (text == null) return;
+  Object.assign(t, {value: text, dirty: false, mtime: t.stale, stale: 0});
+  editorTab = null; switchTo(active);
+};
 // used by the host before closing a window / quitting
 async function saveAll(){ for (const t of tabs.filter(t => t.dirty)) if (!(await saveTab(t))) return false; return true; }
 // Tauri asks here before closing a window with unsaved tabs (the macOS app uses a native alert)
@@ -1211,14 +1312,23 @@ $('#fall').onclick = () => {
 };
 
 // ---- export & copy (renders the View first so diagrams/math are included) ----
+// export file name: front matter `title:`, else the first heading, else the file's own name
+// ponytail: a `# …` line inside a code fence counts as a heading; parse the document if that ever matters
+function exportName(t){
+  const fm = t.value.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1].match(/^title:\s*(.+)$/m)?.[1];
+  const h = fm || t.value.match(/^ {0,3}#{1,6}[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/m)?.[1];
+  const s = (h || '').replace(/^["']|["']$/g, '').replace(/[*_`~=[\]]|<[^>]*>/g, '').replace(/[\\/:*?"<>|\x00-\x1f]/g, '-').trim().slice(0, 100);
+  return s || t.name.replace(/\.\w+$/, '');
+}
 async function exportAs(v){
   commit();
-  const t = T(), name = t.name.replace(/\.\w+$/, '');
+  const t = T(), name = exportName(t);
   if (v === 'md') return download(name + '.md', t.value, 'text/markdown');
   if (v === 'c-md') return copy({text: t.value});
+  if (v === 'pdf') return openExport(t);
+  const was = mode;
   if (mode !== 'read') await setMode('read');
   const html = $('#doc').innerHTML;
-  if (v === 'pdf') native ? native.postMessage({cmd: 'print', paper: opt('paper') || 'a4', margin: opt('margin'), numbers: opt('pagenums')}) : print();
   if (v === 'html') {
     let css = '';
     for (const s of document.styleSheets) try { css += [...s.cssRules].map(r => r.cssText).join('\n'); } catch {}
@@ -1227,6 +1337,7 @@ async function exportAs(v){
   if (v === 'c-html') copy({text: html});
   if (v === 'c-text') copy({text: $('#doc').innerText});
   if (v === 'c-rich') copy({html, text: $('#doc').innerText});
+  if (was !== 'read') setMode(was); // HTML export and copies don't kick you out of editing
 }
 $('#export').onclick = e => {
   if ($('#export').getAttribute('aria-expanded') === 'true') return hideMenu();
@@ -1235,6 +1346,149 @@ $('#export').onclick = e => {
     '-', 'Copy as', ['Markdown', go('c-md')], ['Rich text', go('c-rich')], ['HTML', go('c-html')], ['Plain text', go('c-text')]],
     {right: true, focus: e.detail === 0}); // opened from the keyboard: focus the first item
   $('#export').setAttribute('aria-expanded', 'true');
+};
+// ---- PDF export: settings on the left, the pages on the right ----
+// The document is rendered again, light, and split into fixed-size page boxes here in the page. Every webview then
+// prints the same thing: page size, margins, header, footer and page breaks don't depend on its print engine
+// (macOS WebKit ignores @page size and draws no page numbers). One page box prints as one sheet.
+const PAPER = {a4: [210, 297], letter: [215.9, 279.4], legal: [215.9, 355.6], a3: [297, 420], a5: [148, 210]}; // mm
+const paperSize = () => { const [w, h] = PAPER[opt('paper')] || PAPER.a4; return opt('orient') === 'landscape' ? [h, w] : [w, h]; };
+// the light content and code styles, scoped to the pages. The Swift app can't fetch its files (file://): exports keep the app's colors there.
+let lightCss = null;
+const scopeCss = css => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/[^{}]+\{/g, sel => sel.slice(0, -1).split(',').map(x => '.paper ' + x.trim()).join(',') + '{');
+const getCss = f => fetch(`${CDN}/dist/${f}`).then(r => r.ok ? r.text() : '', () => '').then(scopeCss);
+async function paperStyles(){
+  lightCss ??= await Promise.all([getCss('css/content-theme/light.css'), getCss('js/highlight.js/styles/github.min.css')]);
+  $('#paperCss').textContent = lightCss[0] + (opt('code-colors') === 'vscode' ? '' : lightCss[1]); // VS Code is dark on paper too
+  const [w, h] = paperSize();
+  $('#pageCss').textContent = `@page{size:${w}mm ${h}mm;margin:0}.paper{--pw:${w}mm;--ph:${h}mm;--m:${opt('margin')}mm;--size:${opt('xsize')}pt;--lh:${opt('xlh')}}`;
+}
+async function renderPaper(md){
+  const art = $('#xsrc article');
+  art.innerHTML = '';
+  // the app's current code theme is passed through, so its stylesheet isn't swapped; the scoped light copy wins on paper
+  await new Promise(after => Vditor.preview(art, md, {cdn: CDN, mode: 'light', theme: theme(), hljs: {style: hlOpts().style, lineNumber: false},
+    markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after}));
+  art.querySelector('.vditor-yml-front-matter')?.remove(); // metadata, not content (its title names the file)
+  // diagrams, math and images finish after `after`: wait for them (up to 10 s), so pages are split at their real size
+  const busy = () => art.querySelector(':is(.language-mermaid,.language-flowchart,.language-markmap):not([data-processed=true]),.language-math:not([data-math])');
+  for (let i = 0; i < 100 && busy(); i++) await new Promise(r => setTimeout(r, 100));
+  await Promise.all([...art.querySelectorAll('img')].map(i => i.decode().catch(() => {})));
+  await document.fonts?.ready;
+}
+// Split block b where the page ends: b keeps what fits and the rest comes back as a new block for the next page.
+// Returns b itself when nothing fits, null for blocks that aren't split (paragraphs, quotes, images, diagrams).
+function splitBlock(b, fits){
+  const fill = (box, items) => { // items back into box one by one while they fit; returns the ones that didn't
+    box.replaceChildren();
+    for (let i = 0; i < items.length; i++) { box.append(items[i]); if (!fits()) { items[i].remove(); return items.slice(i); } }
+    return [];
+  };
+  const body = b.tagName === 'TABLE' && b.tBodies[0], list = /^(UL|OL)$/.test(b.tagName), code = b.tagName === 'PRE' && b.querySelector(':scope>code');
+  if (body || list) { // tables split between rows (the header repeats), lists between items
+    const box = body || b, items = [...box.children], rest = fill(box, items);
+    if (rest.length === items.length || !rest.length) { box.append(...items); return b; }
+    const next = b.cloneNode(false), nbox = body ? body.cloneNode(false) : next;
+    if (body) next.append(...(b.tHead ? [b.tHead.cloneNode(true)] : []), nbox);
+    nbox.append(...rest);
+    if (b.tagName === 'OL') next.start = (b.start || 1) + items.length - rest.length; // numbering carries on
+    return next;
+  }
+  if (code) { // code splits between lines. ponytail: a split inside a multi-line comment or string loses its color on the next page
+    const html = code.innerHTML, lines = html.replace(/\n$/, '').split('\n');
+    let lo = 0, hi = lines.length; // the most lines that fit
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; code.innerHTML = lines.slice(0, mid).join('\n'); if (fits()) lo = mid; else hi = mid - 1; }
+    if (!lo || lo === lines.length) { code.innerHTML = html; return b; }
+    code.innerHTML = lines.slice(0, lo).join('\n');
+    const next = b.cloneNode(true);
+    next.querySelector(':scope>code').innerHTML = lines.slice(lo).join('\n');
+    return next;
+  }
+  return null;
+}
+function layoutPages(){
+  const sheets = $('#sheets');
+  sheets.replaceChildren();
+  let pc;
+  const add = () => {
+    const p = document.createElement('div');
+    p.className = 'sheet';
+    p.innerHTML = '<div class="hd"></div><div class="pc vditor-reset"></div><div class="ft"></div>';
+    sheets.append(p);
+    return pc = p.children[1];
+  };
+  const fits = () => { const l = pc.lastElementChild; return !l || l.getBoundingClientRect().bottom <= pc.getBoundingClientRect().bottom + .5; };
+  add();
+  for (const el of $('#xsrc article').children) {
+    let b = el.cloneNode(true), fresh = false;
+    for (;;) {
+      pc.append(b);
+      if (fits()) break;
+      const rest = splitBlock(b, fits);
+      if (rest && rest !== b) { add(); b = rest; fresh = true; continue; }
+      if (fresh || pc.children.length === 1) break; // taller than a page by itself: the bottom is cut. ponytail: split long paragraphs by line
+      b.remove();
+      // headings stay with the text that follows them
+      const kids = [...pc.children];
+      let i = kids.length;
+      while (i > 1 && /^H[1-6]$/.test(kids[i - 1].tagName)) i--;
+      add().append(...kids.slice(i));
+      fresh = true;
+    }
+  }
+  const pages = [...sheets.children], n = pages.length, nums = opt('numbers');
+  pages.forEach((p, i) => {
+    p.firstChild.textContent = opt('header');
+    p.lastChild.textContent = nums === 'n' ? i + 1 : nums === 'of' ? `Page ${i + 1} of ${n}` : '';
+  });
+  $('#xpInfo').textContent = `${n} page${n === 1 ? '' : 's'}`;
+  fitPreview();
+}
+function fitPreview(){
+  const s = $('#sheets'), v = $('#xpv'), k = Math.min(1, (v.clientWidth - 48) / s.offsetWidth);
+  s.style.setProperty('--k', k);
+  Object.assign($('#xpz').style, {width: s.offsetWidth * k + 'px', height: s.offsetHeight * k + 'px'});
+}
+let xpTab = null, xpTimer = 0;
+async function openExport(t){
+  xpTab = t;
+  $('#xpName').value = exportName(t);
+  $('#xpz').append($('#sheets'));
+  $('#sheets').replaceChildren();
+  $('#xpInfo').textContent = 'Preparing…';
+  $('#xpGo').disabled = true;
+  $('#xp').showModal();
+  await paperStyles();
+  await renderPaper(t.value);
+  layoutPages();
+  $('#xpGo').disabled = false;
+}
+document.querySelectorAll('#xp [data-x]').forEach(el => {
+  const k = el.dataset.x, radio = el.type === 'radio', out = el.closest('.field')?.querySelector('output');
+  const show = () => { if (out) out.textContent = el.value + (el.dataset.u || ''); };
+  if (radio) el.checked = el.value === opt(k); else el.value = opt(k);
+  if (k === 'paper' && !el.value) el.value = 'a4'; // an unknown stored size
+  show();
+  el.addEventListener(radio || el.tagName === 'SELECT' ? 'change' : 'input', () => {
+    store.set('set-' + k, el.value); show();
+    clearTimeout(xpTimer); xpTimer = setTimeout(() => { if (!$('#xpGo').disabled) { paperStyles(); layoutPages(); } }, 60);
+  });
+});
+addEventListener('resize', () => $('#xp').open && fitPreview());
+$('#xpCancel').onclick = () => $('#xp').close();
+$('#xpName').onkeydown = e => { if (e.key === 'Enter' && !$('#xpGo').disabled) $('#xpGo').click(); };
+$('#xpGo').onclick = async () => {
+  const name = ($('#xpName').value.trim().replace(/\.pdf$/i, '') || exportName(xpTab)).replace(/[\\/:*?"<>|\x00-\x1f]/g, '-');
+  const [w, h] = paperSize();
+  $('#xp').close();
+  document.body.append($('#sheets')); // printed from here: in print everything else is hidden. It stays until the next export.
+  if (window.__TAURI__) { // writes the file directly, no print dialog
+    const r = await native.postMessage({cmd: 'pdf', name: name + '.pdf', w, h});
+    if (!r?.error) return;
+    await ask('Couldn’t write the PDF', `${r.error} The print dialog opens instead: choose Save as PDF there.`, ['OK']);
+    native.postMessage({cmd: 'print', name, w, h});
+  } else if (native) native.postMessage({cmd: 'print', name, w, h}); // the Swift app
+  else { const title = document.title; document.title = name; print(); document.title = title; } // the browser names the PDF after the title
 };
 async function copy({html, text}){
   if (native) return native.postMessage({cmd: 'copy', html: html ?? '', text});
@@ -1256,7 +1510,7 @@ document.querySelectorAll('#settings [data-k]').forEach(el => {
     if (out) out.textContent = v + u;
     if (k === 'theme') document.documentElement.dataset.theme = themeName();
     else if (k === 'css') $('#userCss').textContent = v;
-    else if (k === 'align') document.body.classList.toggle('left', v === 'left');
+    else if (k === 'align') { document.body.classList.toggle('left', v === 'left'); $('[data-k=width]').disabled = v === 'left'; }
     else if (k === 'code-colors') document.documentElement.dataset.code = v;
     else if (['font', 'size', 'lh', 'width', 'code-font', 'code-size', 'tab'].includes(k)) document.documentElement.style.setProperty('--' + k, v + u);
     // theme, code colors and outline need a re-render. Everything else is CSS and updates instantly.
@@ -1288,6 +1542,9 @@ addEventListener('keydown', e => {
   }
   if (!mod || e.altKey) return;
   if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
+  if (e.key === 'a' && mode === 'read' && !e.target.closest?.('input,textarea,[contenteditable]')) { // select the document, not the app around it
+    e.preventDefault(); return getSelection().selectAllChildren($('#doc'));
+  }
   const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active), n: () => native?.postMessage({cmd: 'newWindow'}),
     ',': () => panel('#settings'), 1: () => setMode('read'), 2: () => setMode('edit'), 3: toggleSource}[e.key];
   if (k) { e.preventDefault(); k(); }
