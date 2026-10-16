@@ -1196,6 +1196,27 @@ function download(name, data, type){
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], {type})); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
 
+// Double- and triple-click in a table cell stay inside the cell (like Obsidian, where each cell is its own editor).
+// WebKit extends a double-click on a cell's last word past the cell boundary, which selects the whole table.
+// Double-click selects the word under the pointer, triple-click the cell's text.
+const WORDS = new Intl.Segmenter(undefined, {granularity: 'word'});
+document.addEventListener('mousedown', e => {
+  if (e.detail < 2 || e.button !== 0 || e.shiftKey) return;
+  const cell = e.target.closest?.('td,th');
+  if (!cell || !cell.closest('#doc,#editor')) return;
+  const r = document.createRange();
+  if (e.detail === 2) {
+    const p = document.caretRangeFromPoint?.(e.clientX, e.clientY), n = p?.startContainer;
+    if (!n || n.nodeType !== 3 || !cell.contains(n)) return; // not on text: leave it to the browser
+    const s = [...WORDS.segment(n.data)].find(s => p.startOffset >= s.index && p.startOffset <= s.index + s.segment.length
+      && (s.isWordLike || p.startOffset < s.index + s.segment.length));
+    if (!s) return;
+    r.setStart(n, s.index); r.setEnd(n, s.index + s.segment.length);
+  } else r.selectNodeContents(cell);
+  e.preventDefault(); // stop the browser's own word/paragraph selection
+  getSelection().removeAllRanges(); getSelection().addRange(r);
+}, true);
+
 // Links in a document leave the app instead of navigating this window away (which would lose unsaved tabs):
 // the host opens web/mail links in the browser, .md files in a tab, and shows other files in their folder.
 // Capture phase, so diagram engines' own link handlers never run; covers SVG links (xlink:href) in diagrams too.
