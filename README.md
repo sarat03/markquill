@@ -28,7 +28,7 @@ brew tap sarat03/markquill https://github.com/sarat03/markquill
 brew install --cask markquill
 ```
 
-**Windows** (winget, coming soon: the package is waiting for approval):
+**Windows** (winget):
 
 ```bash
 winget install Sarat.MarkQuill
