@@ -173,7 +173,8 @@ body:not(.read) #find{top:52px} /* below the formatting toolbar */
 .tog:has(:checked){background:var(--accent-soft);color:var(--accent)}
 .tog:has(:focus-visible){outline:2px solid var(--accent)}
 #find .icon{width:28px;height:28px}
-#fall{flex:none}
+#fall,#frep{flex:none}
+::highlight(find){background:#ffd33d;color:#000}
 
 /* files sidebar */
 #tree{flex:1;overflow:auto;padding:6px}
@@ -235,6 +236,25 @@ dialog{width:min(360px,calc(100vw - 32px));padding:20px;border:0;border-radius:1
 dialog::backdrop{background:#0000004d}
 #ask h3{margin:0 0 6px;font-size:14px;font-weight:600}#ask p{margin:0 0 18px;color:var(--mute);line-height:1.5}
 dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min-width:84px}
+/* Quick Open (⌘P) */
+#qo{width:min(560px,calc(100vw - 32px));margin-top:12vh;padding:8px}
+#qol{max-height:min(340px,50vh);overflow:auto;margin-top:6px}
+#qol .none{padding:10px;color:var(--mute)}
+.qr{display:flex;align-items:baseline;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer}
+.qr.sel{background:var(--hover);box-shadow:inset 2px 0 var(--accent)}
+.qr .qn{flex:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qr .qd{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:12px}
+.qr .qt{flex:none;color:var(--mute);font-size:11px}
+.qr.gone{cursor:default}.qr.gone .qn{opacity:.6}
+/* recent files under the empty state's buttons */
+#recent{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:22px;max-width:100%}
+#recent h3{margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+#recent .rf{max-width:100%;height:auto;min-height:28px;padding:3px 10px;border:0;background:none;color:var(--fg);justify-content:flex-start}
+#recent .rf:hover{background:var(--hover)}#recent .rf:disabled{cursor:default;background:none;color:var(--mute)}
+#recent .rf span,#recent .rf small{overflow:hidden;text-overflow:ellipsis}
+#recent .rf small{min-width:0;color:var(--mute);font-size:12px}
+#clearRecent{height:24px;margin-top:6px;border:0;background:none;color:var(--mute);font-size:12px}
+#clearRecent:hover{background:none;color:var(--fg);text-decoration:underline}
 #drop{display:none;position:fixed;inset:8px;border:2px dashed var(--accent);border-radius:12px;background:var(--accent-soft);z-index:200;pointer-events:none}
 #drop::after{content:"Drop Markdown files to open them";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 18px;border-radius:8px;background:var(--raised);box-shadow:var(--shadow);font-size:14px}
 
@@ -251,6 +271,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end}dialog .row button{min
   #tabs{order:3;flex-basis:100%;height:40px;margin:0 -8px;padding:0 8px}
   .actions .sep{margin:0 2px}
 }
+@media (prefers-reduced-motion:reduce){*,::before,::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 body.ql #side,body.ql #bar,body.ql #status,body.ql #settings,body.ql #find{display:none!important}
 /* ---- PDF export: the document is split into page boxes right here (see layoutPages), always light ---- */
 #xp{width:min(1040px,calc(100vw - 32px));height:min(740px,calc(100vh - 32px));max-width:none;max-height:none;padding:0;overflow:hidden}
@@ -309,7 +330,7 @@ body>#sheets{display:none}
           <button id="mEdit" title="Edit inline, like a document (⌘2). Type / for blocks."><svg class="i" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit</span></button>
           </div>
         <span class="sep"></span>
-        <button id="open" class="icon" title="Open… (⌘O)" aria-label="Open file"><svg class="i" viewBox="0 0 24 24"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg></button>
+        <button id="open" class="icon" title="Open… (⌘O) · Quick open (⌘P)" aria-label="Open file"><svg class="i" viewBox="0 0 24 24"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg></button>
         <button id="save" class="icon" title="Save (⌘S)" aria-label="Save"><svg class="i" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button>
         <button id="export" class="icon" title="Export or copy" aria-label="Export or copy" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg></button>
         <span class="sep"></span>
@@ -326,6 +347,7 @@ body>#sheets{display:none}
             <h2>Nothing here yet</h2>
             <p>Start writing, open a Markdown file, or drop one onto the window.</p>
             <div class="row"><button class="on" data-go="edit">Start writing <kbd>⌘2</kbd></button><button data-go="open">Open file… <kbd>⌘O</kbd></button></div>
+            <div id="recent" hidden><h3>Recent</h3><div id="recentList"></div><button id="clearRecent">Clear recent</button></div>
           </div>
         </div>
         <div id="editor"></div>
@@ -337,11 +359,13 @@ body>#sheets{display:none}
             <span id="fcount" aria-live="polite"></span>
             <label class="tog" title="Match case"><input type="checkbox" id="fcase" class="vh">Aa</label>
             <label class="tog" title="Regular expression"><input type="checkbox" id="fre" class="vh">.*</label>
+            <button id="fprev" class="icon" title="Find previous (⇧Enter)" aria-label="Find previous"><svg class="i" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
             <button id="fnext" class="icon" title="Find next (Enter)" aria-label="Find next"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
             <button id="fclose" class="icon" title="Close (Esc)" aria-label="Close find"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="frow">
             <input type="text" id="fr" placeholder="Replace" aria-label="Replace with">
+            <button id="frep">Replace</button>
             <button id="fall">Replace all</button>
           </div>
         </div>
@@ -404,6 +428,7 @@ body>#sheets{display:none}
       <div id="about" hidden>
         <h3>About</h3>
         <div class="field"><div class="fl"><span>MarkQuill <span id="ver"></span></span><button id="upd">Check for updates</button></div><small id="updMsg" aria-live="polite"></small></div>
+        <div class="field"><div class="fl"><span>Default app</span><button id="mkdef">Make default for Markdown</button></div><small id="defMsg" aria-live="polite"></small></div>
         <label class="toggle" id="autoRow"><span>Install updates automatically<small>Downloads new versions in the background; restart when it's ready</small></span><input type="checkbox" class="switch" data-k="autoupdate"></label>
       </div>
     </div>
@@ -415,6 +440,10 @@ body>#sheets{display:none}
 <div class="menu" id="slash" role="listbox" aria-label="Insert block"></div>
 <dialog id="ask"><form method="dialog"><h3></h3><p></p><div class="row"></div></form></dialog>
 <div id="drop"></div>
+<dialog id="qo" aria-label="Quick open">
+  <input type="text" id="qoq" role="combobox" aria-expanded="true" aria-controls="qol" aria-autocomplete="list" placeholder="Open a tab or recent file…" aria-label="Quick open" autocomplete="off" spellcheck="false">
+  <div id="qol" role="listbox" aria-label="Files"></div>
+</dialog>
 <dialog id="xp" aria-labelledby="xpTitle">
   <div class="xs">
     <div class="scroll">
@@ -459,7 +488,9 @@ if (OS !== 'mac') for (const el of document.querySelectorAll('[title],kbd')) el.
 const QL = window.QL_MODE === true;  // set by the Quick Look extension
 const FRESH = window.FRESH === true; // set for windows opened after the first: start with an empty tab
 const CDN = 'vditor';                // bundled locally: works offline and in Quick Look
-const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+// WKWebView's UA lacks "Safari", so Vditor skips its Safari path and its first-keystroke undo snapshot breaks the selection (Backspace on a selected word moved the caret instead)
+if (/AppleWebKit/.test(navigator.userAgent) && !/Safari\//.test(navigator.userAgent)) Object.defineProperty(navigator, 'userAgent', {value: navigator.userAgent + ' Safari/605.1.15'});
+const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}, del(k){try{localStorage.removeItem(k)}catch{}}};
 const DEFAULTS = {size: 16, lh: 1.6, width: 760, 'code-size': 14, tab: 4, margin: 18, autosave: '0', 'date-format': 'YYYY-MM-DD', align: 'center', 'code-colors': 'github', font: '-apple-system,system-ui,sans-serif',
   paper: 'a4', orient: 'portrait', xsize: 11, xlh: 1.5, numbers: 'none'}; // the last row: PDF export
 const opt = k => store.get('set-' + k) ?? String(DEFAULTS[k] ?? '');
@@ -533,6 +564,7 @@ function themeCss(){
 }
 async function renderView(){
   document.body.classList.toggle('empty', !QL && !T().value.trim());
+  if (!QL && !T().value.trim()) showRecent();
   applyCodeTheme();
   await themeCss();
   return new Promise(after => Vditor.preview($('#doc'), T().value, {cdn: CDN, mode: dark() ? 'dark' : 'light', theme: theme(), hljs: hlOpts(), markdown: markdown(), math: {engine: 'KaTeX'}, lang: 'en_US', after: () => {
@@ -544,6 +576,24 @@ $('#empty').addEventListener('click', e => {
   const go = e.target.closest('[data-go]')?.dataset.go;
   if (go === 'edit') setMode('edit'); else if (go === 'open') $('#open').click();
 });
+// ---- recent files (the host keeps the list; browser and Quick Look have none) ----
+async function recentFiles(){
+  if (!native || QL) return [];
+  try { const r = await native.postMessage({cmd: 'recent'}); return Array.isArray(r) ? r : []; } catch { return []; } // a host without the command
+}
+async function openRecent(path){
+  try { return await native.postMessage({cmd: 'openRecent', path}) === true; } catch { return false; }
+}
+async function showRecent(){
+  const list = (await recentFiles()).slice(0, 5);
+  $('#recent').hidden = !list.length;
+  $('#recentList').innerHTML = list.map(f => `<button class="rf" data-path="${esc(f.path)}" title="${esc(f.path)}"><span>${esc(f.name)}</span><small>${esc(f.dir)}</small></button>`).join('');
+}
+$('#recentList').addEventListener('click', async e => {
+  const b = e.target.closest('.rf');
+  if (b && !await openRecent(b.dataset.path)) { b.disabled = true; b.querySelector('small').textContent = 'File not found'; }
+});
+$('#clearRecent').onclick = async () => { try { await native.postMessage({cmd: 'clearRecent'}); } catch {} showRecent(); };
 
 // ---- Edit (inline WYSIWYG) and Source (raw markdown) modes ----
 // ponytail: one editor instance re-created per tab switch; per-tab undo history is lost on switch. Keep one Vditor per tab if that matters.
@@ -629,11 +679,11 @@ function writingTool(){
   }};
 }
 // ---- task lists: `- [ ] item` lines, outside fenced code (the same ones the renderer turns into checkboxes) ----
-const TASK = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])\]( +)/;
+const TASK = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])\]( +)/; // optional blockquote prefix
 function eachTask(md, fn){ // fn(line, n) -> new line; n counts task lines in document order
   let fence = '', n = 0;
   return md.split('\n').map(l => {
-    const f = l.match(/^\s*(`{3,}|~{3,})/);
+    const f = l.match(/^(?:\s*>)*\s*(`{3,}|~{3,})/);
     if (f && (!fence || f[1][0] === fence[0] && f[1].length >= fence.length)) { fence = fence ? '' : f[1]; return l; }
     return !fence && TASK.test(l) ? fn(l, n++) : l;
   }).join('\n');
@@ -654,7 +704,7 @@ const current = () => editorTab === T() && ready ? editorMd() : T().value;
 function changed(v, t = T()){
   t.value = v;
   if (!t.dirty) { t.dirty = true; syncChrome(); } else if (t === T()) stats();
-  scheduleAutosave(t);
+  scheduleAutosave(t); snapSoon();
 }
 
 // ---- the block holding the caret: focus mode dims the others, the block button sits in its margin ----
@@ -730,11 +780,32 @@ function rewriteBlock(el, fn, focus){
 }
 const TURN = [['Paragraph', '', ICON.para, '⌥⌘0'], ...[1, 2, 3, 4, 5, 6].map(n => ['Heading ' + n, '#'.repeat(n) + ' ', 'H' + n, '⌥⌘' + n]),
   ['Quote', '> ', ICON.quote, '⌥⌘Q'], ['Ordered List', '1. ', ICON.ol, '⌥⇧⌘O'], ['Bullet List', '- ', ICON.ul, '⌥⇧⌘U'], ['Task List', '- [ ] ', ICON.task, '⌥⇧⌘X']];
-// strip one level of heading / quote / list syntax from every line, then apply the new one
+// strip one level of heading / quote / list syntax from every line, then apply the new one.
+// Lists keep their nesting when turned into another list, become one paragraph per item for paragraph / quote,
+// and for a heading only the first item is converted (the rest stays a list below it).
+const ITEM = /^(\s*)(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/;
 function turnInto(md, prefix){
-  const lines = md.split('\n').map(l => l.replace(/^(#{1,6}\s+|>\s?|\s*([-*+]|\d+[.)])\s+(\[[ xX]\]\s+)?)/, ''));
-  if (prefix.startsWith('#')) return prefix + lines.join(' ').replace(/\s+/g, ' ').trim(); // headings are one line
-  return prefix ? lines.filter(l => l.trim()).map(l => prefix + l).join('\n') : lines.join('\n');
+  const lines = md.split('\n');
+  if (lines.some(l => ITEM.test(l))) {
+    if (/^(1\. |- )/.test(prefix)) { // another list type: swap markers, re-indent by depth (a child sits under its parent's content)
+      const stack = [], w = prefix[0] === '1' ? 3 : 2;
+      return lines.map(l => {
+        const m = l.match(ITEM); if (!m) return l;
+        while (stack.length && stack.at(-1) > m[1].length) stack.pop();
+        if (stack.at(-1) !== m[1].length) stack.push(m[1].length);
+        return ' '.repeat((stack.length - 1) * w) + prefix + l.slice(m[0].length);
+      }).join('\n');
+    }
+    const i = lines.findIndex(l => ITEM.test(l)), text = l => l.replace(ITEM, '').trim();
+    if (prefix.startsWith('#')) {
+      const rest = lines.slice(i + 1), ind = Math.min(...rest.filter(l => l.trim()).map(l => l.match(/^\s*/)[0].length));
+      return prefix + text(lines[i]) + (rest.some(l => l.trim()) ? '\n\n' + rest.map(l => l.slice(ind)).join('\n').trim() : '');
+    }
+    return lines.filter(l => l.trim()).map(text).join(prefix ? '\n>\n' + prefix : '\n\n').replace(/^/, prefix);
+  }
+  const plain = lines.map(l => l.replace(/^(#{1,6}\s+|>\s?)/, ''));
+  if (prefix.startsWith('#')) return prefix + plain.join(' ').replace(/\s+/g, ' ').trim(); // headings are one line
+  return prefix ? plain.filter(l => l.trim()).map(l => prefix + l).join('\n') : plain.join('\n');
 }
 function newParagraph(el){ // an empty paragraph has no markdown yet, so it's added to the DOM; typing makes it real
   const p = document.createElement('p'); p.dataset.block = '0'; p.innerHTML = '<br>';
@@ -899,7 +970,6 @@ async function saveAssets(files){
 }
 
 // ---- updates: compare with the latest GitHub release and link to its installers ----
-// ponytail: opens the release page instead of installing in place; self-install needs tauri-plugin-updater + signed builds
 if (window.__TAURI__ && !QL) native.postMessage({cmd: 'version'}).then(v => { $('#ver').textContent = 'v' + v; $('#about').hidden = false; if (!FRESH) checkUpdate(true); }); // launch check: first window only (later windows can Check by hand)
 const newer = (a, b) => { a = a.split('.').map(Number); b = b.split('.').map(Number); for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return false; };
 // checked quietly at launch; a newer release puts a dot on the settings button and a notice in About.
@@ -930,6 +1000,10 @@ async function checkUpdate(quiet){
   } catch { if (!quiet) msg.textContent = 'Couldn\u2019t check for updates. Are you online?'; }
 }
 $('#upd').onclick = () => checkUpdate(false);
+$('#mkdef').onclick = async () => { // the host replies {ok, msg}
+  let r; try { r = await native.postMessage({cmd: 'makeDefault'}); } catch {}
+  $('#defMsg').textContent = r?.msg || 'Couldn\u2019t change the default app.';
+};
 
 // ---- modes ----
 // keep the reading position across View/Edit/Source: anchor on the top-level block at the top of the window
@@ -979,7 +1053,7 @@ function newTab(o = {}){
   switchTo(tabs.length - 1);
 }
 function switchTo(i){
-  commit();
+  commit(); fpos = -1;
   active = Math.max(0, Math.min(i, tabs.length - 1));
   syncChrome();
   setMode(mode, false);
@@ -992,6 +1066,7 @@ function load(name, text, dir = '', path = '', dirty = false){
   const t = {name, value: text, base: dir, path, dirty, blank: false};
   if (pristine(T())) { Object.assign(T(), t); editorTab = null; switchTo(active); } // replace an empty/welcome tab
   else newTab(t);
+  if (dirty) snapSoon();
 }
 async function closeTab(i){
   const t = tabs[i]; if (!t) return false;
@@ -1006,6 +1081,7 @@ async function closeTab(i){
 }
 function removeTab(t){
   const i = tabs.indexOf(t); if (i < 0) return;
+  dropSnap(t);
   if (t === editorTab) editorTab = null;
   const cur = T();
   tabs.splice(i, 1);
@@ -1013,9 +1089,9 @@ function removeTab(t){
   if (cur === t) switchTo(Math.min(i, tabs.length - 1));
   else { active = tabs.indexOf(cur); syncChrome(); }
 }
-function moveToWindow(t){
+function moveToWindow(t, atCursor = false){ // atCursor: a drag-out, the new window opens where the tab was dropped
   if (t === editorTab) commit();
-  native.postMessage({cmd: 'newWindow', name: t.name, text: t.value, path: t.path, base: t.base, dirty: t.dirty});
+  native.postMessage({cmd: 'newWindow', name: t.name, text: t.value, path: t.path, base: t.base, dirty: t.dirty, atCursor});
   removeTab(t);
 }
 function renameTab(t){
@@ -1044,15 +1120,18 @@ function renameTab(t){
   input.onblur = () => finish(true);
 }
 function renderTabs(){
+  const had = $('#tabs').contains(document.activeElement) && document.activeElement.dataset.i; // innerHTML below drops focus
   $('#tabs').innerHTML = tabs.map((t, i) =>
-    `<div class="tab${i === active ? ' cur' : ''}${t.dirty ? ' dirty' : ''}" draggable="true" data-i="${i}" title="${esc(t.path || t.name)}" role="tab" aria-selected="${i === active}">` +
-    `<span class="tn">${esc(t.name)}</span><button class="x" data-close="${i}" aria-label="Close ${esc(t.name)}">${icon(ICON.x)}</button></div>`).join('') +
+    `<div class="tab${i === active ? ' cur' : ''}${t.dirty ? ' dirty' : ''}" draggable="true" data-i="${i}" title="${esc(t.path || t.name)}" role="tab" aria-selected="${i === active}" tabindex="${i === active ? 0 : -1}">` +
+    `<span class="tn">${esc(t.name)}</span><button class="x" tabindex="-1" data-close="${i}" aria-label="Close ${esc(t.name)}">${icon(ICON.x)}</button></div>`).join('') +
     `<button id="newTab" class="icon" title="${keyText('New tab (⌘T)')}" aria-label="New tab">${icon(ICON.plus)}</button>`;
   $('#tabs .cur')?.scrollIntoView({block: 'nearest', inline: 'nearest'});
+  if (had) $(`#tabs .tab[data-i="${had}"]`)?.focus();
 }
 // title bar, dirty dot, session restore: the host keeps what it needs from this one message
 function syncChrome(){
   renderTabs(); renderSide(); stats(); saveState(); syncStale();
+  tabs.forEach(t => t.dirty || dropSnap(t)); // saved or refreshed: its snapshot is stale
   if (native && !QL) native.postMessage({cmd: 'state', title: T().name, path: T().path, dirty: tabs.some(t => t.dirty), paths: tabs.map(t => t.path).filter(Boolean)});
 }
 const tabsEl = $('#tabs');
@@ -1061,6 +1140,17 @@ tabsEl.addEventListener('click', e => {
   const x = e.target.closest('[data-close]'); if (x) return closeTab(+x.dataset.close);
   const el = e.target.closest('.tab');
   if (el && +el.dataset.i !== active && !e.target.closest('input')) switchTo(+el.dataset.i);
+});
+// roving tabindex: Left/Right move between tabs, Enter/Space open one, Delete closes it
+tabsEl.addEventListener('keydown', e => {
+  const el = e.target.closest('.tab'); if (!el || e.target !== el) return;
+  const i = +el.dataset.i, d = {ArrowRight: 1, ArrowLeft: -1}[e.key];
+  if (d) {
+    e.preventDefault();
+    const to = tabsEl.children[(i + d + tabs.length) % tabs.length];
+    tabsEl.querySelectorAll('.tab').forEach(t => t.tabIndex = -1); to.tabIndex = 0; to.focus();
+  } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchTo(i); }
+  else if (e.key === 'Delete') closeTab(i);
 });
 tabsEl.addEventListener('auxclick', e => { const el = e.target.closest('.tab'); if (el && e.button === 1) closeTab(+el.dataset.i); });
 tabsEl.addEventListener('dblclick', e => {
@@ -1080,9 +1170,29 @@ tabsEl.addEventListener('contextmenu', e => {
     ['Close Others', async () => { for (const o of tabs.filter(o => o !== t)) if (!(await closeTab(tabs.indexOf(o)))) break; }],
   ]);
 });
-// drag to reorder; drag a tab out of the window to move it to a new window
-let dragFrom = -1;
-tabsEl.addEventListener('dragstart', e => { const el = e.target.closest('.tab'); if (!el) return; dragFrom = +el.dataset.i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tabs[dragFrom].name); });
+// drag to reorder; drag a tab out of the window to move it to a new window, or onto another window's tab bar to move it there
+// The tab travels by localStorage (shared by every window), not dataTransfer: custom types may not cross webviews, and the text can be big.
+const DRAG = 'drag-tab', TAKEN = 'drag-taken', barEl = $('#bar');
+let dragFrom = -1, dragId = '', taken = '', tabDropped = false, tabLeft = false;
+// the tab another window is dragging right now, if this drag came from there
+const foreign = e => { if (dragFrom >= 0 || !e.dataTransfer?.types.includes('text/plain')) return null; try { const d = JSON.parse(store.get(DRAG)); return d.win !== WIN ? d : null; } catch { return null; } };
+// WKWebView gives no usable dragend coords/dropEffect: instead note whether a drop landed in the window and whether the pointer left it
+addEventListener('drop', e => {
+  if (dragFrom < 0 && !foreign(e)) return;
+  tabDropped = true;
+  if (!(dragFrom < 0 ? barEl : tabsEl).contains(e.target)) { e.preventDefault(); e.stopPropagation(); } // a tab dropped on the page must not paste its name
+}, true);
+addEventListener('dragleave', e => { if (!e.relatedTarget) tabLeft = true; }, true);
+addEventListener('dragover', () => { tabLeft = false; }, true);
+addEventListener('storage', e => { if (e.key === TAKEN && e.newValue) taken = e.newValue; }); // the other window opened our tab
+tabsEl.addEventListener('dragstart', e => {
+  const el = e.target.closest('.tab'); if (!el) return;
+  const t = tabs[dragFrom = +el.dataset.i];
+  dragId = Math.random().toString(36).slice(2); taken = ''; tabDropped = tabLeft = false;
+  if (t === editorTab) commit();
+  store.set(DRAG, JSON.stringify({id: dragId, win: WIN, name: t.name, value: t.value, base: t.base, path: t.path, dirty: t.dirty}));
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.name);
+});
 tabsEl.addEventListener('dragover', e => {
   if (dragFrom < 0) return; e.preventDefault();
   tabsEl.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
@@ -1093,13 +1203,38 @@ tabsEl.addEventListener('drop', e => {
   e.preventDefault();
   const cur = T(), [t] = tabs.splice(dragFrom, 1);
   tabs.splice(+el.dataset.i, 0, t);
-  active = tabs.indexOf(cur); dragFrom = -1; syncChrome();
+  active = tabs.indexOf(cur); dragFrom = -1; store.del(DRAG); syncChrome();
 });
-tabsEl.addEventListener('dragend', e => {
+tabsEl.addEventListener('dragend', async () => {
   tabsEl.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
-  const outside = e.clientX < 0 || e.clientY < 0 || e.clientX > innerWidth || e.clientY > innerHeight;
-  if (dragFrom >= 0 && native && outside && e.dataTransfer.dropEffect === 'none') moveToWindow(tabs[dragFrom]);
+  const t = tabs[dragFrom], id = dragId, out = tabLeft && !tabDropped;
   dragFrom = -1;
+  if (out) await new Promise(r => setTimeout(r, 150)); // give another window's drop time to say it took the tab
+  store.del(DRAG);
+  if (!t || !tabs.includes(t)) return;
+  if (taken === id) removeTab(t); // its text now lives in the other window
+  else if (out && native) moveToWindow(t, true);
+});
+// another window's tab dropped on this tab bar: open it here, at the drop position
+barEl.addEventListener('dragover', e => {
+  if (!foreign(e)) return; e.preventDefault();
+  tabsEl.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+  e.target.closest('.tab')?.classList.add('over');
+});
+barEl.addEventListener('drop', e => {
+  const d = foreign(e); if (!d) return;
+  e.preventDefault();
+  tabsEl.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+  const at = +(e.target.closest('.tab')?.dataset.i ?? tabs.length), i = d.path ? tabs.findIndex(t => t.path === d.path) : -1;
+  if (i >= 0) { // already open here: it takes over the moved text
+    if (d.dirty) { const u = tabs[i]; commit(); Object.assign(u, {value: d.value, dirty: true}); if (editorTab === u) editorTab = null; snapSoon(); }
+    switchTo(i);
+  } else {
+    load(d.name, d.value, d.base, d.path, d.dirty);
+    const [t] = tabs.splice(active, 1); tabs.splice(Math.min(at, tabs.length), 0, t);
+    active = tabs.indexOf(t); syncChrome();
+  }
+  store.set(TAKEN, d.id); store.del(TAKEN);
 });
 
 // ---- menus: items are [label, action, {icon, key, danger, sub}], '-' for a separator, or a plain string for a section heading ----
@@ -1164,9 +1299,12 @@ function ask(title, msg, buttons){
 }
 
 // ---- status bar: save state on the left, word counter on the right ----
+const NOISE = /```[\s\S]*?```|!\[[^\]]*\]\([^)]*\)|\[([^\]]*)\]\([^)]*\)|<\/?[A-Za-z!][^>]*>|\bhttps?:\/\/\S+|^ {0,3}\[[^\]]+\]:\s.*$|\[\^[^\]]+\]|(^\s*(?:[-*+]|\d+[.)])\s+)\[[ xX]\]/gm;
 function stats(){
-  const v = T().value, t = v.replace(/```[\s\S]*?```/g, ' ');
-  const words = (t.match(/[\p{L}\p{N}'’-]+/gu) || []).length;
+  const v = T().value;
+  // words a reader sees: no front matter, fenced code, image / link targets, HTML tags, footnote and task markers; a bare URL is one word
+  const t = v.replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/, ' ').replace(NOISE, (m, link, task) => link ?? task ?? (m[0] === 'h' ? ' x ' : ' '));
+  const words = (t.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) || []).length;
   const paras = v.split(/\n\s*\n/).filter(s => s.trim()).length;
   $('#stats').textContent = `${words.toLocaleString()} words · ${v.length.toLocaleString()} characters · ${paras} paragraphs`;
 }
@@ -1204,6 +1342,8 @@ document.addEventListener('mousedown', e => {
   if (e.detail < 2 || e.button !== 0 || e.shiftKey) return;
   const cell = e.target.closest?.('td,th');
   if (!cell || !cell.closest('#doc,#editor')) return;
+  const ce = cell.closest('[contenteditable="true"]'); // preventDefault below skips the webview's focus handling
+  if (ce && !ce.contains(document.activeElement)) ce.focus({preventScroll: true});
   const r = document.createRange();
   if (e.detail === 2) {
     const p = document.caretRangeFromPoint?.(e.clientX, e.clientY), n = p?.startContainer;
@@ -1212,7 +1352,11 @@ document.addEventListener('mousedown', e => {
       && (s.isWordLike || p.startOffset < s.index + s.segment.length));
     if (!s) return;
     r.setStart(n, s.index); r.setEnd(n, s.index + s.segment.length);
-  } else r.selectNodeContents(cell);
+  } else {
+    const w = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT); let a = w.nextNode(), z = a;
+    for (let n; (n = w.nextNode()); ) z = n;
+    if (a) { r.setStart(a, 0); r.setEnd(z, z.length); } else r.selectNodeContents(cell);
+  }
   e.preventDefault(); // stop the browser's own word/paragraph selection
   getSelection().removeAllRanges(); getSelection().addRange(r);
 }, true);
@@ -1260,6 +1404,54 @@ async function saveTab(t = T()){
 }
 const save = () => saveTab();
 
+// ---- crash recovery: dirty tabs are snapshotted to localStorage a few seconds after an edit and reopened after a crash ----
+// Keys are snap-<window>-<tab>. Every window holds a Web Lock for as long as it lives, so another window's snapshots whose lock is gone
+// are a crash's leftovers: a launching window claims them (claim key, last writer wins) and re-files them under its own id.
+// shortcut: localStorage holds ~5 MB per origin, shared by all windows; a snapshot that doesn't fit is skipped (the text stays in the tab),
+// so a huge unsaved document isn't recoverable. Move to a file in the app data folder via the host if that matters.
+const WIN = Math.random().toString(36).slice(2), snapKey = t => `snap-${WIN}-${t.sid ??= Math.random().toString(36).slice(2)}`;
+let snapTimer = 0;
+function snapSoon(){ if (!QL && !snapTimer) snapTimer = setTimeout(snapAll, 3000); }
+function snapAll(){
+  snapTimer = 0;
+  for (const t of tabs) {
+    if (!t.dirty) { dropSnap(t); continue; }
+    const s = JSON.stringify({name: t.name, path: t.path, base: t.base, text: t.value});
+    if (s === t.snap) continue;
+    try { localStorage.setItem(snapKey(t), s); t.snap = s; } catch {} // quota: keep working, the text is still in the tab
+  }
+}
+function dropSnap(t){ if (t.sid) { store.del(`snap-${WIN}-${t.sid}`); t.sid = t.snap = undefined; } }
+async function recover(){
+  if (QL || !navigator.locks) return;
+  navigator.locks.request('mq-' + WIN, () => new Promise(() => {})); // held until this window dies
+  if (FRESH) return; // windows opened later never claim: only the launch window does
+  const live = new Set((await navigator.locks.query()).held.map(l => l.name));
+  const keys = Object.keys(localStorage).filter(k => /^snap-\w+-\w+$/.test(k) && k.split('-')[1] !== WIN && !live.has('mq-' + k.split('-')[1]));
+  for (const k of keys) store.set('claim-' + k, WIN);
+  await new Promise(r => setTimeout(r, 150)); // another launching window may claim too: whoever wrote last owns it
+  const found = [];
+  for (const k of keys) {
+    const raw = store.get(k), claimed = store.get('claim-' + k) === WIN;
+    store.del('claim-' + k);
+    let o; try { o = claimed && JSON.parse(raw); } catch {}
+    if (!o) continue;
+    const sid = k.split('-')[2];
+    try { localStorage.setItem(`snap-${WIN}-${sid}`, raw); store.del(k); } catch {} // can't re-file: the original stays for the next launch
+    found.push({...o, sid});
+  }
+  if (!found.length) return;
+  setTimeout(() => { // after the session restore has opened its files
+    for (const o of found) {
+      const t = o.path && tabs.find(t => t.path === o.path);
+      if (t && t.value === o.text) { store.del(`snap-${WIN}-${o.sid}`); continue; } // nothing unsaved after all
+      if (t) Object.assign(t, {value: o.text, dirty: true, sid: o.sid});
+      else tabs.push({name: o.name, path: o.path, base: o.base, value: o.text, dirty: true, blank: false, sid: o.sid});
+    }
+    editorTab = null; switchTo(active);
+  }, 2500);
+}
+
 // ---- live reload: a saved file changed on disk (another editor, git) -> "Refresh to update" ----
 // ponytail: polls every 2s while the window is visible; a native file watcher if that ever shows up in battery use
 setInterval(async () => {
@@ -1283,6 +1475,7 @@ async function saveAll(){ for (const t of tabs.filter(t => t.dirty)) if (!(await
 // Tauri asks here before closing a window with unsaved tabs (the macOS app uses a native alert)
 async function confirmClose(){
   const r = await ask('Save changes before closing?', 'Some documents in this window have unsaved changes.', ['Save All', "Don't Save", 'Cancel']);
+  if (r === 1) tabs.forEach(dropSnap); // discarded on purpose: not to be recovered
   return r === 1 || (r === 0 && await saveAll());
 }
 $('#save').onclick = save;
@@ -1294,7 +1487,8 @@ function scheduleAutosave(t){ // only files that already exist on disk; never po
 }
 const isDoc = f => /\.(md|markdown|mdown|txt)$/i.test(f?.name || '');
 const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
-addEventListener('dragover', e => { e.preventDefault(); if (mode === 'read' && hasFiles(e)) $('#drop').style.display = 'block'; });
+// only file drags are accepted here (tab and block drags have their own handlers); text-selection drags are left to the browser
+addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); if (mode === 'read') $('#drop').style.display = 'block'; });
 addEventListener('dragleave', e => { if (!e.relatedTarget) $('#drop').style.display = 'none'; });
 addEventListener('drop', async e => {
   $('#drop').style.display = 'none';
@@ -1306,9 +1500,12 @@ addEventListener('drop', async e => {
 
 // ---- sidebar: this window's open documents ----
 function renderSide(){
+  const had = $('#tree').contains(document.activeElement) && document.activeElement.dataset.i;
   $('#tree').innerHTML = tabs.map((t, i) =>
-    `<a data-i="${i}" class="${i === active ? 'cur' : ''}${t.dirty ? ' dirty' : ''}" title="${esc(t.path || t.name)}">${icon(ICON.file)}<span>${esc(t.name)}</span></a>`).join('');
+    `<a data-i="${i}" role="button" tabindex="0"${i === active ? ' aria-current="true"' : ''} class="${i === active ? 'cur' : ''}${t.dirty ? ' dirty' : ''}" title="${esc(t.path || t.name)}">${icon(ICON.file)}<span>${esc(t.name)}</span></a>`).join('');
+  if (had) $(`#tree a[data-i="${had}"]`)?.focus();
 }
+$('#tree').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('a[data-i]')) { e.preventDefault(); switchTo(+e.target.dataset.i); } });
 $('#tree').addEventListener('click', e => { const a = e.target.closest('a[data-i]'); if (a) switchTo(+a.dataset.i); });
 function toggleTree(){
   const on = document.body.classList.toggle('tree');
@@ -1321,6 +1518,7 @@ function panel(id, open){
   const el = $(id), btn = $(id === '#find' ? '#tFind' : '#gear');
   open ??= !el.classList.contains('open');
   el.classList.toggle('open', open); btn.setAttribute('aria-expanded', open);
+  if (!open && id === '#find') CSS.highlights?.delete('find');
   if (open && id === '#find') { $('#fq').focus(); $('#fq').select(); countMatches(); }
 }
 $('#tFind').onclick = () => panel('#find');
@@ -1334,24 +1532,93 @@ function pattern(){
   try { return new RegExp($('#fre').checked ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#fcase').checked ? 'g' : 'gi'); }
   catch { $('#fcount').textContent = 'Invalid regex'; return null; }
 }
+// Matches are found in the text the pane shows (the rendered page in View, the editor's text in Edit and Source), so Next / Previous
+// step through what you see in every mode; Replace All works on the markdown.
+let fpos = -1; // where the current match starts in that text (-1: none yet)
+const BLOCK = 'p,li,h1,h2,h3,h4,h5,h6,td,th,pre,div,blockquote,tr';
+const paneRoot = () => mode === 'read' ? $('#doc') : ready && editor.vditor[editor.getCurrentMode()]?.element;
+function findHits(){
+  const p = pattern(), root = paneRoot(); if (!p || !root) return null;
+  if (root.tagName === 'TEXTAREA') return {p, s: root.value, area: root, hits: [...root.value.matchAll(p)].filter(m => m[0])}; // Source mode
+  const nodes = [], w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); // [offset in s, text node]; hidden text (Edit's markers) is skipped
+  let s = '', prev = null;
+  for (let n; n = w.nextNode();) {
+    const el = n.parentElement;
+    if (!n.data || !el.getClientRects().length || el.closest('.vditor-copy')) continue;
+    const b = el.closest(BLOCK);
+    if (prev && b !== prev) s += '\n';
+    prev = b; nodes.push([s.length, n]); s += n.data;
+  }
+  return {p, s, nodes, hits: nodes.length ? [...s.matchAll(p)].filter(m => m[0]) : []};
+}
+function rangeOf({nodes}, m){
+  const at = o => { let k = nodes.length; while (nodes[--k][0] > o); return [nodes[k][1], o - nodes[k][0]]; };
+  const r = document.createRange(), [a, i] = at(m.index), [b, j] = at(m.index + m[0].length - 1);
+  r.setStart(a, Math.min(i, a.length)); r.setEnd(b, Math.min(j + 1, b.length));
+  return r;
+}
+// what the replacement text for match m of `str` is: literal, or with $1 / $& expanded (regex mode) in the match's own context
+function expand(p, str, m){
+  const rep = $('#fr').value; if (!$('#fre').checked) return rep;
+  const y = new RegExp(p.source, p.flags.replace('g', 'y')); y.lastIndex = m.index;
+  const out = str.replace(y, rep);
+  return out.slice(m.index, out.length - (str.length - m.index - m[0].length));
+}
 function countMatches(){
-  $('#fcount').textContent = '';
-  const p = pattern(); if (!p) return;
-  const n = (current().match(p) || []).length;
+  $('#fcount').textContent = ''; CSS.highlights?.delete('find');
+  const f = findHits(); if (!f) return;
+  const n = f.hits.length;
   $('#fcount').textContent = n ? `${n} match${n === 1 ? '' : 'es'}` : 'No results';
 }
-['fq', 'fre', 'fcase'].forEach(id => $('#' + id).addEventListener('input', countMatches));
-$('#fnext').onclick = () => { // highlights the next visible occurrence; regex patterns use the first literal match
-  const p = pattern(); if (!p) return;
-  const m = current().match(p); if (m) window.find(m[0], $('#fcase').checked, false, true);
+function step(dir){
+  const f = findHits(); if (!f) return;
+  const hs = f.hits; if (!hs.length) return countMatches();
+  const m = dir > 0 ? hs.find(m => m.index > fpos) ?? hs[0] : hs.findLast(m => m.index < fpos) ?? hs.at(-1);
+  fpos = m.index;
+  if (f.area) { // a textarea can't be highlighted from outside: select the match there (focusing scrolls it into view), then hand the focus back
+    const from = document.activeElement;
+    f.area.setSelectionRange(m.index, m.index + m[0].length); f.area.focus(); from?.focus?.();
+  } else {
+    const r = rangeOf(f, m); // highlighted without taking focus from the find field; browsers without the Highlight API select it
+    if (window.Highlight && CSS.highlights) CSS.highlights.set('find', new Highlight(r));
+    else { getSelection().removeAllRanges(); getSelection().addRange(r); }
+    r.startContainer.parentElement.scrollIntoView({block: 'center'});
+  }
+  $('#fcount').textContent = `${hs.indexOf(m) + 1} of ${hs.length}`;
+}
+['fq', 'fre', 'fcase'].forEach(id => $('#' + id).addEventListener('input', () => { fpos = -1; countMatches(); }));
+$('#fnext').onclick = () => step(1);
+$('#fprev').onclick = () => step(-1);
+$('#frep').onclick = async () => { // replaces the current match (or the next one), then moves on
+  const f = findHits(); if (!f) return;
+  const m = f.hits.find(m => m.index === fpos) ?? f.hits.find(m => m.index > fpos) ?? f.hits[0];
+  if (!m) return countMatches();
+  const x = expand(f.p, f.s, m);
+  if (mode === 'read') { // not editable: change the markdown, at the same occurrence of this text
+    // shortcut: the rendered page and the markdown can differ (link targets, markers), so the Nth identical match is assumed to be the same one
+    const v = current(), key = h => $('#fcase').checked ? h[0] : h[0].toLowerCase();
+    const k = f.hits.filter(h => h.index < m.index && key(h) === key(m)).length;
+    const t = [...v.matchAll(f.p)].filter(h => key(h) === key(m))[k];
+    if (!t) return void($('#fcount').textContent = 'Not found in the source');
+    changed(v.slice(0, t.index) + expand(f.p, v, t) + v.slice(t.index + t[0].length), T());
+    await renderView();
+  } else {
+    const root = paneRoot(), sel = getSelection();
+    root.focus({preventScroll: true});
+    if (f.area) f.area.setSelectionRange(m.index, m.index + m[0].length); else { sel.removeAllRanges(); sel.addRange(rangeOf(f, m)); }
+    document.execCommand('insertText', false, x);
+    await new Promise(r => setTimeout(r, 50)); // let the editor re-render
+  }
+  fpos = m.index + x.length - 1;
+  step(1);
 };
 $('#fall').onclick = () => {
   const p = pattern(); if (!p) return;
-  const t = T(), v = current(), n = (v.match(p) || []).length;
+  const t = T(), v = current(), n = (v.match(p) || []).length, r = $('#fr').value;
   if (!n) return;
-  changed(v.replace(p, $('#fr').value), t);
+  changed(v.replace(p, $('#fre').checked ? r : () => r), t); // literal unless regex is on: no $1 / $& / $$ expansion
   if (mode === 'read') renderView(); else editor.setValue(t.value);
-  $('#fcount').textContent = `Replaced ${n}`;
+  fpos = -1; $('#fcount').textContent = `Replaced ${n}`;
 };
 
 // ---- export & copy (renders the View first so diagrams/math are included) ----
@@ -1420,7 +1687,7 @@ async function renderPaper(md){
   await document.fonts?.ready;
 }
 // Split block b where the page ends: b keeps what fits and the rest comes back as a new block for the next page.
-// Returns b itself when nothing fits, null for blocks that aren't split (paragraphs, quotes, images, diagrams).
+// Returns b itself when nothing fits, null for blocks that aren't split (quotes, images, diagrams: layoutPages scales those).
 function splitBlock(b, fits){
   const fill = (box, items) => { // items back into box one by one while they fit; returns the ones that didn't
     box.replaceChildren();
@@ -1437,6 +1704,14 @@ function splitBlock(b, fits){
     if (b.tagName === 'OL') next.start = (b.start || 1) + items.length - rest.length; // numbering carries on
     return next;
   }
+  if (b.tagName === 'P') { // paragraphs split between lines
+    const pt = overflowPoint(b, b.closest('.pc').getBoundingClientRect().bottom); if (!pt) return null;
+    const r = document.createRange(); r.setStart(b, 0); r.setEnd(...pt);
+    if (!r.toString().trim()) return b; // not even the first line fits
+    r.setStart(...pt); r.setEnd(b, b.childNodes.length);
+    const next = b.cloneNode(false); next.append(r.extractContents());
+    return next;
+  }
   if (code) { // code splits between lines. ponytail: a split inside a multi-line comment or string loses its color on the next page
     const html = code.innerHTML, lines = html.replace(/\n$/, '').split('\n');
     let lo = 0, hi = lines.length; // the most lines that fit
@@ -1446,6 +1721,26 @@ function splitBlock(b, fits){
     const next = b.cloneNode(true);
     next.querySelector(':scope>code').innerHTML = lines.slice(lo).join('\n');
     return next;
+  }
+  return null;
+}
+// scale block b down until it fits its page (zoom shrinks the layout box too, so `fits` sees it)
+function shrink(b, fits){
+  const room = b.closest('.pc').getBoundingClientRect().height;
+  for (let i = 0; i < 5 && !fits(); i++) b.style.zoom = (+b.style.zoom || 1) * Math.min(.98, room / b.getBoundingClientRect().height);
+}
+// the first character of b that lies below `bottom`: where a paragraph's page ends
+function overflowPoint(b, bottom){
+  const w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT), r = document.createRange();
+  const below = (n, i) => { // characters collapsed to nothing (spaces at a line break) take the next one's position
+    for (; i < n.length; i++) { r.setStart(n, i); r.setEnd(n, i + 1); const q = r.getClientRects(); if (q.length) return q[q.length - 1].bottom > bottom + .5; }
+    return false;
+  };
+  for (let n; n = w.nextNode();) {
+    if (!below(n, n.length - 1)) continue;
+    let lo = 0, hi = n.length - 1; // the first character that's below
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (below(n, mid)) hi = mid; else lo = mid + 1; }
+    return [n, lo];
   }
   return null;
 }
@@ -1469,7 +1764,7 @@ function layoutPages(){
       if (fits()) break;
       const rest = splitBlock(b, fits);
       if (rest && rest !== b) { add(); b = rest; fresh = true; continue; }
-      if (fresh || pc.children.length === 1) break; // taller than a page by itself: the bottom is cut. ponytail: split long paragraphs by line
+      if (fresh || pc.children.length === 1) { shrink(b, fits); break; } // taller than a page and unsplittable (image, diagram): scale it to the page
       b.remove();
       // headings stay with the text that follows them
       const kids = [...pc.children];
@@ -1546,7 +1841,8 @@ for (const k of ['font', 'code-font']) if (store.get('set-' + k) === 'ui-monospa
 document.querySelectorAll('#settings [data-k]').forEach(el => {
   const k = el.dataset.k, u = el.dataset.u || '', box = el.type === 'checkbox', radio = el.type === 'radio';
   const out = el.type === 'range' && el.closest('.field')?.querySelector('output');
-  if (box) el.checked = opt(k) === 'true'; else if (radio) el.checked = el.value === opt(k); else if (opt(k) !== '') el.value = opt(k);
+  const read = () => { if (box) el.checked = opt(k) === 'true'; else if (radio) el.checked = el.value === opt(k); else if (opt(k) !== '' || el.tagName === 'TEXTAREA') el.value = opt(k); };
+  read();
   const apply = rerender => {
     const v = box ? String(el.checked) : el.value;
     store.set('set-' + k, v);
@@ -1561,8 +1857,71 @@ document.querySelectorAll('#settings [data-k]').forEach(el => {
   };
   el.addEventListener(box || radio || el.tagName === 'SELECT' ? 'change' : 'input', () => apply(true));
   if (!radio || el.checked) apply(false); // a radio group applies once, through its checked option
+  el._sync = () => { read(); if (!radio || el.checked) apply(true); }; // another window changed it
+});
+// a setting changed in another window (same localStorage) applies here the way it did at startup
+addEventListener('storage', e => {
+  if (!e.key?.startsWith('set-')) return;
+  if (e.key === 'set-writing') return setWriting(opt('writing'));
+  document.querySelectorAll('#settings [data-k]').forEach(el => el.dataset.k === e.key.slice(4) && el._sync());
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!opt('theme')) { document.documentElement.dataset.theme = themeName(); setMode(mode); } });
+
+// ---- Quick Open (⌘P): this window's tabs, then recent files; type to filter ----
+// subsequence match: every typed letter must appear in order. Runs of adjacent letters and letters at a word start score more, a late start less.
+function fuzzy(q, s){
+  s = s.toLowerCase();
+  let score = 0, at = -1, run = 0;
+  for (const c of q) {
+    const j = s.indexOf(c, at + 1); if (j < 0) return -1;
+    run = j === at + 1 ? run + 1 : 0;
+    score += 1 + run * 2 + (!j || /[\s\/\\._-]/.test(s[j - 1]) ? 3 : 0) - (at < 0 ? Math.min(j, 10) / 10 : 0);
+    at = j;
+  }
+  return score - s.length / 100;
+}
+// name matches (+1000) always rank above matches that only hit the folder path
+const qoScore = (q, it) => { const n = fuzzy(q, it.name); return n >= 0 ? 1000 + n : fuzzy(q, it.dir + '/' + it.name); };
+let qo = null, qoFrom = null; // open palette: {items, list, i}
+async function quickOpen(){
+  const d = $('#qo'); if (d.open) return $('#qoq').select();
+  const dirOf = p => p.replace(/[\\/][^\\/]*$/, '');
+  const s = qo = {items: tabs.map(t => ({t, name: t.name, dir: dirOf(t.path), tag: 'Open'})), list: [], i: 0};
+  qoFrom = document.activeElement; commit();
+  $('#qoq').value = ''; qoRender(); d.showModal();
+  const open = new Set(tabs.map(t => t.path).filter(Boolean));
+  const recent = (await recentFiles()).filter(f => !open.has(f.path));
+  if (qo === s) { s.items.push(...recent.map(f => ({...f, tag: 'Recent'}))); qoRender(); } // closed meanwhile: drop them
+}
+function qoRender(reset){
+  const q = $('#qoq').value.toLowerCase().replace(/\s/g, ''), box = $('#qol'), s = qo, prev = s.list[s.i];
+  s.list = q ? s.items.map(it => [it, qoScore(q, it)]).filter(([, n]) => n >= 0).sort((a, b) => b[1] - a[1]).map(([it]) => it) : s.items; // sort is stable: ties keep tabs-then-recent order
+  s.i = reset ? 0 : Math.max(0, s.list.indexOf(prev));
+  box.innerHTML = s.list.map((it, n) => `<div class="qr${it.gone ? ' gone' : ''}" role="option" id="qo-${n}" data-n="${n}"${it.gone ? ' aria-disabled="true"' : ''} title="${esc(it.path || it.name)}">` +
+    `<span class="qn">${esc(it.name)}</span><span class="qd">${it.gone ? 'File not found' : esc(it.dir)}</span><span class="qt">${it.tag}</span></div>`).join('') || '<div class="none">No matching files</div>';
+  qoMark();
+}
+function qoMark(){
+  const q = $('#qoq'), els = $('#qol').querySelectorAll('.qr');
+  els.forEach((el, n) => { el.classList.toggle('sel', n === qo.i); el.setAttribute('aria-selected', n === qo.i); });
+  els.length ? q.setAttribute('aria-activedescendant', 'qo-' + qo.i) : q.removeAttribute('aria-activedescendant');
+  els[qo.i]?.scrollIntoView({block: 'nearest'});
+}
+async function qoPick(){
+  const s = qo, it = s?.list[s.i]; if (!it || it.gone) return;
+  if (it.t) { if (tabs.includes(it.t)) { $('#qo').close(); switchTo(tabs.indexOf(it.t)); } return; }
+  if (await openRecent(it.path)) { if (qo === s) $('#qo').close(); } else { it.gone = true; if (qo === s) qoRender(); } // false: not in the list, or the file is gone
+}
+$('#qoq').addEventListener('input', () => qoRender(true));
+$('#qoq').addEventListener('keydown', e => {
+  const d = {ArrowDown: 1, ArrowUp: -1}[e.key], n = qo.list.length;
+  if (d) { e.preventDefault(); if (n) { qo.i = (qo.i + d + n) % n; qoMark(); } }
+  else if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); qoPick(); }
+});
+$('#qol').addEventListener('mousedown', e => e.preventDefault()); // keep the focus in the field
+$('#qol').addEventListener('mousemove', e => { const r = e.target.closest('.qr'); if (r && +r.dataset.n !== qo.i) { qo.i = +r.dataset.n; qoMark(); } });
+$('#qol').addEventListener('click', e => { const r = e.target.closest('.qr'); if (r) { qo.i = +r.dataset.n; qoPick(); } });
+$('#qo').addEventListener('close', () => { qo = null; qoFrom?.isConnected && qoFrom.focus?.(); }); // Esc and picks both end here
 
 // ---- shortcuts (⌘ on macOS, Ctrl elsewhere) ----
 addEventListener('keydown', e => {
@@ -1575,7 +1934,7 @@ addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === 'Tab') return pickSlash();
     if (e.key === 'Escape') return closeSlash();
   }
-  if (e.key === 'Escape') { hideMenu(); panel('#find', false); }
+  if (e.key === 'Escape' && !$('#qo').open) { hideMenu(); panel('#find', false); } // Esc in Quick Open only closes it
   if (e.ctrlKey && e.key === 'Tab') { e.preventDefault(); return switchTo((active + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length); }
   if (OS !== 'mac' && e.getModifierState('AltGraph')) return; // AltGr arrives as Ctrl+Alt: it's typing @, €, { …, not a shortcut
   if (mode === 'edit' && mod && (e.shiftKey || e.altKey)) {
@@ -1584,15 +1943,16 @@ addEventListener('keydown', e => {
     if (el && (!texty || TEXTY.test(el.tagName))) { e.preventDefault(); e.stopPropagation(); return f(el); }
   }
   if (!mod || e.altKey) return;
+  if ($('#qo').open && e.key !== 'p') return; // the palette is modal: other shortcuts wait
   if (e.shiftKey && '[]{}'.includes(e.key)) { e.preventDefault(); return switchTo((active + ('[{'.includes(e.key) ? -1 : 1) + tabs.length) % tabs.length); }
   if (e.key === 'a' && mode === 'read' && !e.target.closest?.('input,textarea,[contenteditable]')) { // select the document, not the app around it
     e.preventDefault(); return getSelection().selectAllChildren($('#doc'));
   }
-  const k = {s: save, o: () => $('#open').click(), f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active), n: () => native?.postMessage({cmd: 'newWindow'}),
+  const k = {s: save, o: () => $('#open').click(), p: quickOpen, f: () => panel('#find', true), '\\': toggleTree, t: () => newTab(), w: () => closeTab(active), n: () => native?.postMessage({cmd: 'newWindow'}),
     ',': () => panel('#settings'), 1: () => setMode('read'), 2: () => setMode('edit'), 3: toggleSource}[e.key];
   if (k) { e.preventDefault(); k(); }
 }, true);
-$('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#fnext').click(); });
+$('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') $(e.shiftKey ? '#fprev' : '#fnext').click(); });
 
 const WELCOME = keyText(`# Welcome to MarkQuill
 
@@ -1601,6 +1961,7 @@ You're in **View mode**: select and copy freely, nothing changes.
 - **Edit** (⌘2) edits inline like Typora. Type \`/\` on an empty line to insert any block. Paste, drop or attach images and files.
 - **Blocks**: click the badge in a block's margin (¶, H1…) to duplicate it, turn it into another kind or delete it; its menu lists the shortcuts. Drag the badge to move the block.
 - **Source** (⌘3) switches writing to raw markdown. Pick Standard, Source, Typewriter or Focus mode from the dropdown at the end of the formatting row.
+- **Quick Open** (⌘P) jumps to an open tab or a recent file; type to filter.
 - **Tabs**: ⌘T new tab, ⌘W close, Ctrl+Tab to switch. Double-click a tab to rename the file, drag to reorder, right-click to move it to a new window.
 - **Settings** (⌘,) has themes, text and code styles, auto-save and more. Changes apply live.
 
@@ -1632,6 +1993,7 @@ async function whatsNew(){
   if (tabs.includes(t)) switchTo(tabs.indexOf(t)); // in front of any restored or opened files
 }
 if (!QL && store.get('tree') === 'true') toggleTree();
+recover();
 </script>
 </body>
 </html>

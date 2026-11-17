@@ -6,5 +6,12 @@
 <dict>
   <key>CFBundleIconName</key>
   <string>AppIcon</string>
+  <key>UTImportedTypeDeclarations</key>
+  <array><dict>
+    <key>UTTypeIdentifier</key><string>net.daringfireball.markdown</string>
+    <key>UTTypeDescription</key><string>Markdown</string>
+    <key>UTTypeConformsTo</key><array><string>public.plain-text</string></array>
+    <key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>md</string><string>markdown</string><string>mdown</string></array></dict>
+  </dict></array>
 </dict>
 </plist>

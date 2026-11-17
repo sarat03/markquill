@@ -103,6 +103,7 @@ On Windows and Linux, use **Ctrl** for ⌘, **Alt** for ⌥ and **Shift** for �
 | Settings | ⌘, | | Paragraph / Heading 1–6 | ⌥⌘0 / ⌥⌘1–6 |
 | Quote | ⌥⌘Q | | Ordered / bullet / task list | ⌥⇧⌘O / U / X |
 | Duplicate block | ⇧⌘P | | New paragraph / delete block | ⇧⌘N / ⇧⌘D |
+| Quick Open (tabs and recent files) | ⌘P | | | |
 
 The block shortcuts (headings, quote, lists, duplicate, new paragraph, delete) work in Edit mode.
 
@@ -127,7 +128,7 @@ macos/               Mac-only extras (Swift)
 .github/workflows/   CI: tests, build and launch check (Linux per pull request, every OS per release)
 ```
 
-The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. There are eleven commands: `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change. The Tauri shell also answers `version`, `fetchUpdate` and `installUpdate` for in-app updates, and `pdf`, which writes the page boxes straight to a PDF file; the page only uses them when it runs in Tauri.
+The page talks to its shell with `native.postMessage({cmd, ...})` and gets a promise back. The core commands are `state`, `open`, `save`, `rename`, `asset`, `export`, `copy`, `print`, `link`, `newWindow` and `closeWindow`. A new shell only needs to answer these; the page doesn't change. The Tauri shell also answers `version`, `fetchUpdate` and `installUpdate` for in-app updates, `makeDefault` to set itself as the Markdown app, and `pdf`, which writes the page boxes straight to a PDF file; the page only uses them when it runs in Tauri.
 
 ## Build from source
 
@@ -169,7 +170,7 @@ Bug reports, fixes and improvements are welcome. [CONTRIBUTING.md](CONTRIBUTING.
 
 ## Security
 
-Please report security problems privately, not in a public issue. [SECURITY.md](SECURITY.md) explains how, and what MarkQuill does with your files and the network. In short: no telemetry, no network requests of its own, and HTML in documents is sanitized.
+Please report security problems privately, not in a public issue. [SECURITY.md](SECURITY.md) explains how, and what MarkQuill does with your files and the network. In short: no telemetry, no network requests beyond update checks, and HTML in documents is sanitized.
 
 ## License
 

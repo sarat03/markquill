@@ -69,7 +69,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
                 if !known(app, &s("path")) { alert(&w, "MarkQuill only saves files you opened or chose."); return json!(false) }
                 return json!(write(&w, &s("data"), Path::new(&s("path"))));
             }
-            return match save_panel(&w, &s("name")) { Some(p) if write(&w, &s("data"), &p) => { allow(app, &p); info(&p) } _ => json!(false) };
+            return match save_panel(&w, &s("name")) { Some(p) if write(&w, &s("data"), &p) => { allow(app, &p); recent_bump(app, &canon(&p), None); info(&p) } _ => json!(false) };
         }
         // live reload: the page polls the file's modified time and, on "Refresh", reads it again
         "mtime" if known(app, &s("path")) => return json!(fs::metadata(s("path")).and_then(|m| m.modified()).ok()
@@ -79,6 +79,17 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
         "rename" => return err("MarkQuill only renames files you opened or chose."),
         "asset" if !s("doc").is_empty() && !known(app, &s("doc")) => return err("MarkQuill only adds attachments next to files you opened or chose."),
         "asset" => return save_asset(&s("doc"), &s("name"), &s("data"), if s("folder") == "images" { "images" } else { "assets" }),
+        "recent" => return json!(load_recent(app).iter().map(Path::new).filter(|p| p.is_file()).map(|p| json!({
+            "path": p.to_string_lossy(), "name": p.file_name().unwrap_or_default().to_string_lossy(),
+            "dir": p.parent().unwrap_or(p).to_string_lossy()})).collect::<Vec<_>>()),
+        // only paths the user opened before: the page can't use this to open anything else
+        "openRecent" => {
+            let p = PathBuf::from(s("path"));
+            if !load_recent(app).contains(&s("path")) || !p.is_file() { return json!(false) }
+            open_file(&w, &p);
+            return json!(true);
+        }
+        "clearRecent" => save_recent(app, &[]),
         "export" => if let Some(p) = save_panel(&w, &s("name")) { write(&w, &s("data"), &p); },
         "copy" => {
             let _ = if s("html").is_empty() { app.clipboard().write_text(s("text")) } else { app.clipboard().write_html(s("html"), Some(s("text"))) };
@@ -109,6 +120,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
         }
         "newWindow" => { // optionally carrying a tab moved out of this window
             let d = new_window(app, true);
+            if msg["atCursor"].as_bool() == Some(true) { place_at_cursor(app, &d) } // a tab dragged out lands where it was dropped
             if !s("name").is_empty() { load(&d, json!([s("name"), s("text"), s("base"), s("path"), msg["dirty"].as_bool().unwrap_or(false)])) }
         }
         "closeWindow" => { // the page closed its last tab, or confirmClose() said yes
@@ -122,6 +134,7 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
         "closeCancelled" => st(app).quitting = false,
         "link" => open_link(&w, &s("href"), &s("doc")),
         "version" => return json!(app.package_info().version.to_string()),
+        "makeDefault" => return make_default(&w),
         "fetchUpdate" => return json!(fetch_update(app).await.ok().flatten()), // background download; replies with its version
         "installUpdate" => {
             if st(app).wins.values().any(|v| v.dirty) { alert(&w, "Save your documents first, then restart to update."); return json!(false) }
@@ -130,6 +143,40 @@ async fn native(w: WebviewWindow, msg: Value) -> Value {
         _ => {}
     }
     Value::Null
+}
+
+// Make MarkQuill the default app for Markdown. Replies {ok, msg}.
+fn make_default(w: &WebviewWindow) -> Value {
+    let (ok, msg) = default_handler(w);
+    json!({ "ok": ok, "msg": msg })
+}
+
+#[cfg(target_os = "macos")]
+fn default_handler(w: &WebviewWindow) -> (bool, String) {
+    #[link(name = "CoreServices", kind = "framework")]
+    extern "C" { fn LSSetDefaultRoleHandlerForContentType(content_type: *const objc2_foundation::NSString, roles: u32, handler: *const objc2_foundation::NSString) -> i32; }
+    use objc2_foundation::NSString;
+    let (uti, id) = (NSString::from_str("net.daringfireball.markdown"), NSString::from_str(&w.app_handle().config().identifier));
+    // NSString is toll-free bridged to CFString; 0xFFFFFFFF is kLSRolesAll
+    match unsafe { LSSetDefaultRoleHandlerForContentType(&*uti, 0xFFFF_FFFF, &*id) } {
+        0 => (true, format!("MarkQuill is now the default for Markdown")),
+        code => (false, format!("Couldn't set the default app (error {code})")),
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn default_handler(w: &WebviewWindow) -> (bool, String) { // Windows protects the choice: the user has to make it
+    let _ = w.opener().open_url("ms-settings:defaultapps", None::<&str>);
+    (true, format!("Choose MarkQuill for .md in Windows Settings"))
+}
+
+#[cfg(target_os = "linux")]
+fn default_handler(_: &WebviewWindow) -> (bool, String) { // the bundler names the desktop file after productName
+    match std::process::Command::new("xdg-mime").args(["default", &format!("MarkQuill.desktop"), "text/markdown"]).status() {
+        Ok(s) if s.success() => (true, format!("MarkQuill is now the default for Markdown")),
+        Ok(s) => (false, format!("Couldn't set the default app ({s})")),
+        Err(e) => (false, format!("Couldn't run xdg-mime: {e}")),
+    }
 }
 
 // ---- updates (macOS and Windows; the Linux .deb/.rpm update through the package manager) ----
@@ -263,6 +310,18 @@ fn new_window(app: &AppHandle, fresh: bool) -> WebviewWindow {
         .expect("couldn't create a window")
 }
 
+// Put the window's tab strip under the OS cursor (physical pixels, on the monitor the cursor is over), inside that monitor's work area.
+fn place_at_cursor(app: &AppHandle, w: &WebviewWindow) {
+    let Ok(c) = app.cursor_position() else { return };
+    let Ok(Some(m)) = app.monitor_from_point(c.x, c.y) else { return };
+    let Ok(size) = w.outer_size() else { return };
+    let (a, grab) = (m.work_area(), (40.0 * m.scale_factor()) as i32);
+    let fit = |at: i32, from: i32, room: u32, len: u32| at.clamp(from, (from + room as i32 - len as i32).max(from));
+    let _ = w.set_position(tauri::PhysicalPosition::new(
+        fit(c.x as i32 - size.width as i32 / 2, a.position.x, a.size.width, size.width),
+        fit(c.y as i32 - grab, a.position.y, a.size.height, size.height)));
+}
+
 fn load(w: &WebviewWindow, args: Value) {
     let mut g = st(w.app_handle());
     let Some(win) = g.wins.get_mut(w.label()) else { return };
@@ -312,6 +371,34 @@ fn load_session(app: &AppHandle) -> Vec<Vec<String>> {
     saved.into_iter().map(|w| w.into_iter().filter(|p| Path::new(p).is_file()).collect::<Vec<_>>()).filter(|w| !w.is_empty()).collect()
 }
 
+// ---- recent files: absolute paths, newest first, kept beside session.json ----
+fn recent_file(app: &AppHandle) -> Option<PathBuf> {
+    app.path().app_config_dir().ok().map(|d| d.join("recent.json"))
+}
+
+fn load_recent(app: &AppHandle) -> Vec<String> {
+    recent_file(app).and_then(|f| fs::read_to_string(f).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default()
+}
+
+fn save_recent(app: &AppHandle, list: &[String]) {
+    if let Some(f) = recent_file(app) {
+        let _ = fs::create_dir_all(f.parent().unwrap());
+        let _ = fs::write(f, json!(list).to_string());
+    }
+}
+
+// Pure list logic: `new` goes first, `old` (a renamed file's previous path) and any duplicate of `new` drop out, 20 at most.
+fn bumped(mut list: Vec<String>, new: &str, old: Option<&str>) -> Vec<String> {
+    list.retain(|p| p != new && Some(p.as_str()) != old);
+    list.insert(0, new.to_string());
+    list.truncate(20);
+    list
+}
+
+fn recent_bump(app: &AppHandle, new: &Path, old: Option<&str>) {
+    save_recent(app, &bumped(load_recent(app), &new.to_string_lossy(), old));
+}
+
 // Welcome only on the very first launch; after an update, a "What's new" tab. Remembers the version it last ran as.
 fn first_tab(app: &AppHandle, had_session: bool) -> String {
     let Ok(dir) = app.path().app_config_dir() else { return String::new() };
@@ -357,6 +444,7 @@ fn open_file(w: &WebviewWindow, p: &Path) {
         return alert(w, &format!("Couldn't read {name} as UTF-8 text."));
     };
     allow(w.app_handle(), &p);
+    recent_bump(w.app_handle(), &p, None);
     let i = info(&p);
     load(w, json!([i["name"], text, i["base"], i["path"], false]));
 }
@@ -384,7 +472,9 @@ fn write(w: &WebviewWindow, text: &str, p: &Path) -> bool {
     let out = encode(text, format);
     // write a sibling temp file, then swap it in: a failed write never leaves a half-written document
     let tmp = p.with_file_name(format!(".{}.markquill-tmp", p.file_name().unwrap_or_default().to_string_lossy()));
-    match fs::write(&tmp, out).and_then(|_| fs::rename(&tmp, p)) {
+    // keep the file's mode (and read-only bit): the temp file would otherwise get the default one
+    let swap = || { fs::write(&tmp, out)?; if let Ok(m) = fs::metadata(p) { fs::set_permissions(&tmp, m.permissions())? } fs::rename(&tmp, p) };
+    match swap() {
         Ok(_) => true,
         Err(e) => { let _ = fs::remove_file(&tmp); alert(w, &e.to_string()); false }
     }
@@ -451,8 +541,10 @@ fn rename(app: &AppHandle, path: &str, name: &str) -> Value {
     // Linux is case-sensitive: there a Notes.md next to notes.md is a different file and must not be overwritten.
     let same = if cfg!(target_os = "linux") { dst == src } else { dst.to_string_lossy().to_lowercase() == path.to_lowercase() };
     if !same && dst.exists() { return err(format!("{name} already exists in this folder.")) }
+    let old = canon(&src); // canonical form is what the recent list stores; gone after the rename
     match fs::rename(&src, &dst) {
         Ok(_) => {
+            recent_bump(app, &canon(&dst), Some(&old.to_string_lossy()));
             let mut g = st(app);
             if let Some(f) = g.formats.remove(path) { g.formats.insert(dst.to_string_lossy().into_owned(), f); }
             g.files.remove(path);
@@ -538,10 +630,12 @@ fn main() {
             } else if session.is_empty() {
                 new_window(h, false);
             } else {
+                let recent = load_recent(h); // restoring isn't the user opening files: keep the list as it was
                 for (i, paths) in session.iter().enumerate() {
                     let w = new_window(h, i > 0);
                     paths.iter().for_each(|p| open_file(&w, Path::new(p)));
                 }
+                save_recent(h, &recent);
             }
             Ok(())
         })
@@ -579,6 +673,16 @@ mod tests {
     }
 
     #[test]
+    fn recent_list_front_dedupe_cap() {
+        let l = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(bumped(l(&["a", "b", "c"]), "c", None), l(&["c", "a", "b"]));
+        assert_eq!(bumped(l(&["a", "b"]), "z", Some("b")), l(&["z", "a"]));
+        let full: Vec<String> = (0..20).map(|i| i.to_string()).collect();
+        let out = bumped(full, "new", None);
+        assert_eq!((out.len(), out[0].as_str(), out[19].as_str()), (20, "new", "18"));
+    }
+
+    #[test]
     fn file_names_valid_everywhere() {
         for ok in ["notes.md", "Notes 2.md", "con-notes.md", "COM.md"] { assert!(valid_name(ok), "{ok}") }
         for bad in ["", ".hidden", "a/b.md", r"a\b.md", "a:b.md", "why?.md", "CON.md", "nul", "lpt1.txt", "trailing.", "x\u{7}.md"] {
@@ -603,5 +707,20 @@ mod tests {
             ("/Users/me/My Notes", "asset://localhost/%2FUsers%2Fme%2FMy%20Notes%2F")
         };
         assert_eq!(asset_url(Path::new(dir)), url);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn swap_keeps_file_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let f = std::env::temp_dir().join(format!("markquill-mode-{}.md", std::process::id()));
+        let tmp = f.with_file_name(format!(".{}.markquill-tmp", f.file_name().unwrap().to_string_lossy()));
+        fs::write(&f, "a").unwrap();
+        fs::set_permissions(&f, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::write(&tmp, "b").unwrap();
+        fs::set_permissions(&tmp, fs::metadata(&f).unwrap().permissions()).unwrap();
+        fs::rename(&tmp, &f).unwrap();
+        assert_eq!(fs::metadata(&f).unwrap().permissions().mode() & 0o777, 0o600);
+        let _ = fs::remove_file(&f);
     }
 }

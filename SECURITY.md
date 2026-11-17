@@ -18,7 +18,7 @@ Reports are answered as soon as possible. Once a fix is released, the advisory i
 
 These points describe the Tauri app, which is what the Releases page ships.
 
-- **No telemetry, no accounts, no update checks.** The app itself makes no network requests. Its editor, math, diagram and code-color engines are bundled.
+- **No telemetry, no accounts.** The only network requests are update related: at launch the app asks the GitHub releases API for the latest release (for the update check and the "What's new" tab), and the updater plugin downloads `latest.json` and, if you accept, the signed installer from GitHub Releases. Nothing else is sent. Its editor, math, diagram and code-color engines are bundled.
 - **Documents can load remote content.** An image or link in a Markdown file that points to a web address is fetched from there, the same as in any Markdown viewer.
 - **Documents can't run code.** HTML in a document is sanitized before it's shown. Diagrams run in Mermaid's strict mode. Script links, event handlers and embedded frames are also stripped from whatever the diagram engines draw.
 - **Links leave the app.** Clicking a web or email link opens your browser. A link to a Markdown file opens it in a tab. A link to any other file shows it in Finder or Explorer; MarkQuill never runs it. The app window can't be navigated to another page.
